@@ -12,7 +12,7 @@ from   pyomo.opt             import SolverFactory, SolverStatus, TerminationCond
 from   pyomo.util.infeasible import log_infeasible_constraints
 from   pyomo.environ         import Suffix
 
-def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConsole, p, sc):
+def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConsole, p, sc, nuclear_formulation, deadzone_formulation):
     print('Problem solving                        ****')
     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
@@ -20,10 +20,10 @@ def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConso
     #%% solving the problem
     Solver = SolverFactory(SolverName)                                                       # select solver
     if SolverName == 'gurobi':
-        FileName = _path+'/openTEPES_gurobi_'+CaseName+'.log'
+        FileName = _path+'/openTEPES_gurobi_'+CaseName+nuclear_formulation+deadzone_formulation+'.log'
         if os.path.exists(FileName):
             os.remove(FileName)
-        Solver.options['LogFile'         ] = _path+'/openTEPES_gurobi_'+CaseName+'.log'
+        Solver.options['LogFile'         ] = _path+'/openTEPES_gurobi_'+CaseName+nuclear_formulation+deadzone_formulation+'.log'
         # Solver.options['SolutionTarget'] = 1                                                 # optimal solution with or without basic solutions
         Solver.options['Method'          ] = 2                                                 # barrier method
         Solver.options['Crossover'       ] = -1

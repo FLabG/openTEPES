@@ -17,8 +17,11 @@ from .openTEPES_ProblemSolving   import ProblemSolving
 from .openTEPES_OutputResults    import OutputResultsParVarCon, InvestmentResults, GenerationOperationResults, GenerationOperationHeatResults, ESSOperationResults, ReservoirOperationResults, NetworkH2OperationResults, NetworkHeatOperationResults, FlexibilityResults, NetworkOperationResults, MarginalResults, OperationSummaryResults, ReliabilityResults, CostSummaryResults, EconomicResults, NetworkMapResults
 
 
-def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConsole):
-
+def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConsole, formulation_index, dead_zone):
+    formulation_type_dict = {0: "No Flexibility", 1: "Jenkins", 2: "Jenkins 2", 3: "Df_d", 4: "Labora S",5: "Simplex"}
+    DeadZone_type_dict = {0: "None", 1:"Stable", 2:"d"}
+    nuclear_formulation = formulation_type_dict[formulation_index]
+    deadzone_formulation = DeadZone_type_dict[dead_zone]
     InitialTime = time.time()
     _path = os.path.join(DirName, CaseName)
 
@@ -129,7 +132,7 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
             if mTEPES.pIndHeat == 1:
                 NetworkHeatOperationModelFormulation        (mTEPES, mTEPES, pIndLogConsole, p, sc, st)
             GenerationOperationModelFormulationCommitment   (mTEPES, mTEPES, pIndLogConsole, p, sc, st)
-            GenerationOperationModelFormulationRampMinTime  (mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+            GenerationOperationModelFormulationRampMinTime  (mTEPES, mTEPES, pIndLogConsole, p, sc, st, nuclear_formulation, deadzone_formulation)
             NetworkSwitchingModelFormulation                (mTEPES, mTEPES, pIndLogConsole, p, sc, st)
             NetworkOperationModelFormulation                (mTEPES, mTEPES, pIndLogConsole, p, sc, st)
             # introduce cycle flow formulations
@@ -142,14 +145,14 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
 
                 if pIndLogConsole == 1:
                     StartTime         = time.time()
-                    mTEPES.write(_path+'/openTEPES_'+CaseName+'_'+str(p)+'_'+str(sc)+'.lp', io_options={'symbolic_solver_labels': True})
+                    mTEPES.write(_path+'/openTEPES_'+CaseName+'_'+str(p)+'_'+str(sc)+nuclear_formulation+deadzone_formulation+'.lp', io_options={'symbolic_solver_labels': True})
                     WritingLPFileTime = time.time() - StartTime
                     StartTime         = time.time()
                     print('Writing LP file                        ... ', round(WritingLPFileTime), 's')
 
                 # there are no expansion decisions, or they are ignored (it is an operation planning model)
                 mTEPES.pScenProb[p,sc] = 1.0
-                ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc)
+                ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, nuclear_formulation, deadzone_formulation)
                 mTEPES.pScenProb[p,sc] = 0.0
                 # deactivate the constraints of the previous period and scenario
                 for c in mTEPES.component_objects(pyo.Constraint, active=True):
@@ -193,7 +196,7 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
                         print('Writing LP file                        ... ', round(WritingLPFileTime), 's')
 
                     # there are investment decisions (it is an expansion and operation planning model)
-                    ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc)
+                    ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, nuclear_formulation, deadzone_formulation)
 
     mTEPES.del_component(mTEPES.st)
     mTEPES.del_component(mTEPES.n )
@@ -276,39 +279,46 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
         pIndMarginalResults             = 0
         pIndEconomicResults             = 0
 
+
+    _path = os.path.join(DirName, CaseName)
+    new_folder_name = nuclear_formulation + deadzone_formulation
+    new_path = os.path.join(_path, new_folder_name)
+    os.makedirs(new_path, exist_ok=True)
+    _path = new_path
+    print("Updated path:", _path)
     # output parameters, variables, and duals to CSV files
     if pIndDumpRawResults:
-        OutputResultsParVarCon(DirName, CaseName, mTEPES, mTEPES)
+        OutputResultsParVarCon(_path,DirName, CaseName, mTEPES, mTEPES)
 
     if pIndInvestmentResults           == 1:
-        InvestmentResults                 (DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput,                 pIndPlotOutput)
+        InvestmentResults                 (_path,DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput,                 pIndPlotOutput)
     if pIndGenerationOperationResults  == 1:
-        GenerationOperationResults        (DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput)
+        GenerationOperationResults        (_path,DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput)
         if len(mTEPES.ch) and mTEPES.pIndHeat == 1:
-            GenerationOperationHeatResults(DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput)
+            GenerationOperationHeatResults(_path,DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput)
     if pIndESSOperationResults         == 1 and len(mTEPES.es):
-        ESSOperationResults               (DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput)
+        ESSOperationResults               (_path,DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput)
     if pIndReservoirOperationResults   == 1 and len(mTEPES.rs) and mTEPES.pIndHydroTopology == 1:
-        ReservoirOperationResults         (DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput,                 pIndPlotOutput)
+        ReservoirOperationResults         (_path,DirName, CaseName, mTEPES, mTEPES, pIndTechnologyOutput,                 pIndPlotOutput)
     if pIndNetworkH2OperationResults   == 1 and len(mTEPES.pa) and mTEPES.pIndHydrogen == 1:
-        NetworkH2OperationResults         (DirName, CaseName, mTEPES, mTEPES)
+        NetworkH2OperationResults         (_path,DirName, CaseName, mTEPES, mTEPES)
     if pIndNetworkHeatOperationResults == 1 and len(mTEPES.ha) and mTEPES.pIndHeat == 1:
-        NetworkHeatOperationResults       (DirName, CaseName, mTEPES, mTEPES)
+        NetworkHeatOperationResults       (_path,DirName, CaseName, mTEPES, mTEPES)
     if pIndFlexibilityResults          == 1:
-        FlexibilityResults                (DirName, CaseName, mTEPES, mTEPES)
+        FlexibilityResults                (_path,DirName, CaseName, mTEPES, mTEPES)
     if pIndReliabilityResults          == 1:
-        ReliabilityResults                (DirName, CaseName, mTEPES, mTEPES)
+        ReliabilityResults                (_path,DirName, CaseName, mTEPES, mTEPES)
     if pIndNetworkOperationResults     == 1:
-        NetworkOperationResults           (DirName, CaseName, mTEPES, mTEPES)
+        NetworkOperationResults           (_path,DirName, CaseName, mTEPES, mTEPES)
     if pIndNetworkMapResults           == 1:
-        NetworkMapResults                 (DirName, CaseName, mTEPES, mTEPES)
+        NetworkMapResults                 (_path,DirName, CaseName, mTEPES, mTEPES)
     if pIndOperationSummaryResults     == 1:
-        OperationSummaryResults           (DirName, CaseName, mTEPES, mTEPES)
+        OperationSummaryResults           (_path,DirName, CaseName, mTEPES, mTEPES)
     if pIndCostSummaryResults          == 1:
-        CostSummaryResults                (DirName, CaseName, mTEPES, mTEPES)
+        CostSummaryResults                (_path,DirName, CaseName, mTEPES, mTEPES)
     if pIndMarginalResults             == 1:
-        MarginalResults                   (DirName, CaseName, mTEPES, mTEPES,                 pIndPlotOutput)
+        MarginalResults                   (_path,DirName, CaseName, mTEPES, mTEPES,                 pIndPlotOutput)
     if pIndEconomicResults             == 1:
-        EconomicResults                   (DirName, CaseName, mTEPES, mTEPES, pIndAreaOutput, pIndPlotOutput)
+        EconomicResults                   (_path,DirName, CaseName, mTEPES, mTEPES, pIndAreaOutput, pIndPlotOutput)
 
     return mTEPES

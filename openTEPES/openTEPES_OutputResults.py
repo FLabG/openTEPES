@@ -102,10 +102,10 @@ def LinePlots(period, scenario, df, Category, X, Y, OperationType):
 
 
 # write parameters, variables, and duals in CSV files
-def OutputResultsParVarCon(DirName, CaseName, OptModel, mTEPES):
+def OutputResultsParVarCon(_path,DirName, CaseName, OptModel, mTEPES):
     # print('Writing pars, vars, and duals results  ... ', end='')
     # DirName = os.path.dirname(DirName)
-    _path   = os.path.join(DirName, CaseName)
+    # _path   = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # Load the model from the pickle file
@@ -115,7 +115,7 @@ def OutputResultsParVarCon(DirName, CaseName, OptModel, mTEPES):
     # output parameters, variables, and constraints to CSV files
 
     # dump_folder = _path+'/CaseDumpFolder_'+CaseName+'_'+str(datetime.datetime.now().strftime('%Y%m%d'))+'/'
-    dump_folder = os.path.join(DirName, CaseName, 'CaseDumpFolder_'+CaseName+'_'+str(datetime.datetime.now().strftime('%Y%m%d')))
+    dump_folder = os.path.join(_path,DirName, CaseName, 'CaseDumpFolder_'+CaseName+'_'+str(datetime.datetime.now().strftime('%Y%m%d')))
     if not os.path.exists(dump_folder):
         os.makedirs(dump_folder)
     DateName = str(datetime.datetime.now().strftime('%Y%m%d'))
@@ -180,9 +180,9 @@ def OutputResultsParVarCon(DirName, CaseName, OptModel, mTEPES):
     print('Writing pars, vars, and duals results  ... ', round(WritingResultsTime), 's')
 
 
-def InvestmentResults(DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndPlotOutput):
+def InvestmentResults(_path,DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndPlotOutput):
     #%% outputting the investment decisions
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # generators to technology (g2t)
@@ -358,9 +358,9 @@ def InvestmentResults(DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput,
     print('Writing            investment results  ... ', round(WritingResultsTime), 's')
 
 
-def GenerationOperationResults(DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput):
+def GenerationOperationResults(_path,DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput):
     #%% outputting the generation operation
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # generators to area (n2a)
@@ -594,9 +594,9 @@ def GenerationOperationResults(DirName, CaseName, OptModel, mTEPES, pIndTechnolo
     print('Writing  generation operation results  ... ', round(WritingResultsTime), 's')
 
 
-def GenerationOperationHeatResults(DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput):
+def GenerationOperationHeatResults(_path,DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput):
     #%% outputting the generation operation
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # generators to area (g2a)
@@ -676,9 +676,9 @@ def GenerationOperationHeatResults(DirName, CaseName, OptModel, mTEPES, pIndTech
     print('Writing  heat       operation results  ... ', round(WritingResultsTime), 's')
 
 
-def ESSOperationResults(DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput):
+def ESSOperationResults(_path,DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndAreaOutput, pIndPlotOutput):
     # %% outputting the ESS operation
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # generators to area (e2a)
@@ -805,9 +805,9 @@ def ESSOperationResults(DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutpu
     print('Writing         ESS operation results  ... ', round(WritingResultsTime), 's')
 
 
-def ReservoirOperationResults(DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndPlotOutput):
+def ReservoirOperationResults(_path,DirName, CaseName, OptModel, mTEPES, pIndTechnologyOutput, pIndPlotOutput):
     # %% outputting the reservoir operation
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # technology to hydro units (o2h)
@@ -854,9 +854,9 @@ def ReservoirOperationResults(DirName, CaseName, OptModel, mTEPES, pIndTechnolog
     print('Writing   reservoir operation results  ... ', round(WritingResultsTime), 's')
 
 
-def NetworkH2OperationResults(DirName, CaseName, OptModel, mTEPES):
+def NetworkH2OperationResults(_path,DirName, CaseName, OptModel, mTEPES):
     # %% outputting the hydrogen pipeline network operation
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     DIR   = os.path.dirname(__file__)
     StartTime = time.time()
 
@@ -1040,9 +1040,9 @@ def NetworkH2OperationResults(DirName, CaseName, OptModel, mTEPES):
     print('Writing    hydrogen operation results  ... ', round(WritingResultsTime), 's')
 
 
-def NetworkHeatOperationResults(DirName, CaseName, OptModel, mTEPES):
+def NetworkHeatOperationResults(_path,DirName, CaseName, OptModel, mTEPES):
     # %% outputting the heat pipe network operation
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     DIR   = os.path.dirname(__file__)
     StartTime = time.time()
 
@@ -1242,9 +1242,9 @@ def NetworkHeatOperationResults(DirName, CaseName, OptModel, mTEPES):
     print('Writing  heat netwk operation results  ... ', round(WritingResultsTime), 's')
 
 
-def OperationSummaryResults(DirName, CaseName, OptModel, mTEPES):
+def OperationSummaryResults(_path,DirName, CaseName, OptModel, mTEPES):
     #%% outputting the generation operation
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # %%  Power balance per period, scenario, and load level
@@ -1419,9 +1419,9 @@ def OperationSummaryResults(DirName, CaseName, OptModel, mTEPES):
     print('Writing elect network summary results  ... ', round(WritingResultsTime), 's')
 
 
-def FlexibilityResults(DirName, CaseName, OptModel, mTEPES):
+def FlexibilityResults(_path,DirName, CaseName, OptModel, mTEPES):
     # %% outputting the flexibility
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # generators to technology (o2e)
@@ -1471,9 +1471,9 @@ def FlexibilityResults(DirName, CaseName, OptModel, mTEPES):
     print('Writing           flexibility results  ... ', round(WritingResultsTime), 's')
 
 
-def NetworkOperationResults(DirName, CaseName, OptModel, mTEPES):
+def NetworkOperationResults(_path,DirName, CaseName, OptModel, mTEPES):
     # %% outputting the electric network operation
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     if sum(mTEPES.pIndBinLineSwitch[:, :, :]):
@@ -1543,9 +1543,9 @@ def NetworkOperationResults(DirName, CaseName, OptModel, mTEPES):
     print('Writing elect netwk operation results  ... ', round(WritingResultsTime), 's')
 
 
-def MarginalResults(DirName, CaseName, OptModel, mTEPES, pIndPlotOutput):
+def MarginalResults(_path,DirName, CaseName, OptModel, mTEPES, pIndPlotOutput):
     # %% outputting marginal results
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # incoming and outgoing lines (lin) (lout)
@@ -1737,9 +1737,9 @@ def MarginalResults(DirName, CaseName, OptModel, mTEPES, pIndPlotOutput):
     print('Writing  marginal information results  ... ', round(WritingResultsTime), 's')
 
 
-def ReliabilityResults(DirName, CaseName, OptModel, mTEPES):
+def ReliabilityResults(_path,DirName, CaseName, OptModel, mTEPES):
     # %% outputting the reliability indexes
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     r2r = defaultdict(list)
@@ -1792,9 +1792,9 @@ def ReliabilityResults(DirName, CaseName, OptModel, mTEPES):
     WritingResultsTime = time.time() - StartTime
     print('Writing           reliability indexes  ... ', round(WritingResultsTime), 's')
 
-def CostSummaryResults(DirName, CaseName, OptModel, mTEPES):
+def CostSummaryResults(_path,DirName, CaseName, OptModel, mTEPES):
     # %% outputting the system costs and revenues
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     SysCost        = pd.Series(data=[                                                                                                                               OptModel.vTotalSCost()                                                                                                          ], index=['']    ).to_frame(name='Total          System Cost').stack()
@@ -1816,9 +1816,9 @@ def CostSummaryResults(DirName, CaseName, OptModel, mTEPES):
     print('Writing          cost summary results  ... ', round(WritingResultsTime), 's')
 
 
-def EconomicResults(DirName, CaseName, OptModel, mTEPES, pIndAreaOutput, pIndPlotOutput):
+def EconomicResults(_path,DirName, CaseName, OptModel, mTEPES, pIndAreaOutput, pIndPlotOutput):
     # %% outputting the system costs and revenues
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     StartTime = time.time()
 
     # %%  Power balance per period, scenario, and load level
@@ -2126,9 +2126,9 @@ def EconomicResults(DirName, CaseName, OptModel, mTEPES, pIndAreaOutput, pIndPlo
     print('Writing              economic results  ... ', round(WritingResultsTime), 's')
 
 
-def NetworkMapResults(DirName, CaseName, OptModel, mTEPES):
+def NetworkMapResults(_path,DirName, CaseName, OptModel, mTEPES):
     # %% plotting the network in a map
-    _path = os.path.join(DirName, CaseName)
+#     _path = os.path.join(DirName, CaseName)
     DIR   = os.path.dirname(__file__)
     StartTime = time.time()
 
