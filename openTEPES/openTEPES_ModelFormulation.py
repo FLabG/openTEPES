@@ -1156,7 +1156,7 @@ def GenerationOperationModelFormulationRampMinTime(OptModel, mTEPES, pIndLogCons
 
     if pIndSimplexFormulation:
         def eMinStableTime(OptModel, n, nr):
-            if (mTEPES.pStableTime[nr] and mTEPES.pºMaxPower2ndBlock[p, sc, n, nr] and mTEPES.n.ord(n) >= mTEPES.pStableTime[nr] + 2):
+            if (mTEPES.pStableTime[nr] and mTEPES.pMaxPower2ndBlock[p, sc, n, nr] and mTEPES.n.ord(n) >= mTEPES.pStableTime[nr] + 2):
                 return OptModel.vRampUpState[p, sc, n, nr] + sum(OptModel.vRampDwState[p, sc, n2, nr] for n2 in list(mTEPES.n2)[mTEPES.n.ord(n) - mTEPES.pStableTime[nr] - 1 : mTEPES.n.ord(n) - 1]) <= 1
             else:
                 return Constraint.Skip
