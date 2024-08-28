@@ -1,8 +1,11 @@
 Change Log
 =============
 
-[4.17.4] - 2024-07-19
+[4.17.4] - 2024-08-08
 ----------------------
+- [CHANGED] split generation and consumption in ESS technologies
+- [FIXED] fix error when solving by stages
+- [FIXED] fix error in writing investment output results
 - [CHANGED] introduce outflow incompatibility column in Data_Generation file
 
 [4.17.3] - 2024-07-19
