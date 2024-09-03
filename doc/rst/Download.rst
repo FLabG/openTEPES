@@ -29,12 +29,12 @@ Cases
 -----
 Here, you have the input files of:
 
-- a `small case study of 9 nodes <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/9n>`_,
-- a dynamic (multiyear) `small case study of 9 nodes <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/9n7y>`_ with 13 representative weeks per year,
+- a `static small case study of 9 nodes <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/9n>`_,
+- a `dynamic (multiyear) small case study of 9 nodes <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/9n7y>`_ with 13 representative weeks per year,
 - another one like a `small Spanish system <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/sSEP>`_,
 - a `modified RTS24 case study <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/RTS24>`_,
-- the `Reliability Test System Grid Modernization Lab Consortium (RTS-GMLC) <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/RTS-GMLC>`_,
-- a dynamic (multiyear) `Reliability Test System Grid Modernization Lab Consortium (RTS-GMLC) <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/RTS-GMLC_6y>`_ with 13 representative weeks per year, and
+- the `static Reliability Test System Grid Modernization Lab Consortium (RTS-GMLC) <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/RTS-GMLC>`_,
+- a `dynamic (multiyear) Reliability Test System Grid Modernization Lab Consortium (RTS-GMLC) <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/RTS-GMLC_6y>`_ with 13 representative weeks per year, and
 - a `Nigeria 2030 case study <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master/openTEPES/NG2030>`_.
 
 Code
@@ -115,13 +115,13 @@ Get started
 
 Developers
 
-By cloning the `openTEPES <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master>`_ repository, you can create branches and propose pull-request. Any help will be very appreciated.
+By cloning the `openTEPES repository <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master>`_, you can create branches and propose pull-request. Any help will be very appreciated.
 
 Users
 
 If you are not planning on developing, please follows the instructions of the `Installation <#installation>`_.
 
-Once installation is complete, `openTEPES <https://github.com/IIT-EnergySystemModels/openTEPES/tree/master>`_ can be executed in a test mode by using a command prompt.
+Once installation is complete, openTEPES can be executed in a test mode by using a command prompt.
 In the directory of your choice, open and execute the openTEPES_run.py script by using the following on the command prompt (Windows) or Terminal (Linux). (Depending on what your standard python version is, you might need to call `python3` instead of `python`.):
 
      ``openTEPES_Main``

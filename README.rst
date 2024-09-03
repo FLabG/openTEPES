@@ -215,6 +215,6 @@ It can be run in Binder:
 Expected Results
 ################
 .. image:: doc/img/oT_Map_Network_TF2030.png
-  :scale: 50 %
+  :width: 600px
   :align: center
   :alt: Network map with investment decisions
