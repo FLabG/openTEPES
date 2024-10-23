@@ -246,7 +246,7 @@ They are written in **lowercase** letters.
 :math:`i^p_{\omega ne}`                                          ESS stored energy (inventory, reservoir energy, state of charge)                                  GWh
 :math:`s^p_{\omega ne}`                                          ESS spilled energy                                                                                GWh
 :math:`uc^p_{\omega ng}, su^p_{\omega ng}, sd^p_{\omega ng}`     Commitment, startup, and shutdown of generation unit per load level                               {0,1}
-:math:`rss^p_{\omega ng}, rsu^p_{\omega ng}, rsd^p_{\omega ng}`  Stable, ramp up, and ramp down states of generation unit with minimum stable time per load level  {0,1}
+:math:`rss^p_{\omega nt}, rsu^p_{\omega nt}, rsd^p_{\omega nt}`  Stable, ramp up, and ramp down states of generation unit with minimum stable time per load level  {0,1}
 :math:`uc'_g`                                                    Maximum commitment of a generation unit for all the load levels                                   {0,1}
 ===============================================================  ================================================================================================  ======
 
@@ -482,7 +482,7 @@ Logical relation between commitment, startup and shutdown status of a committed 
 
 Logical relation between stable, ramp up, and ramp down states (units with stable time) [p.u.] «``eStableStates``»
 
-:math:`rss^p_{\omega ng} + rsu^p_{\omega ng} + rsd^p_{\omega ng} = uc^p_{\omega ng} \quad \forall p \omega ng`
+:math:`rss^p_{\omega nt} + rsu^p_{\omega nt} + rsd^p_{\omega nt} = uc^p_{\omega nt} \quad \forall p \omega nt`
 
 Maximum commitment of a committable unit (all except the VRES units) [p.u.] «``eMaxCommitment``»
 
@@ -512,11 +512,12 @@ Maximum ramp down and ramp up for the charge of an ESS [p.u.] «``eRampUpCharge`
 
 :math:`\frac{- c^p_{\omega,n-\nu,e} + dr^p_{\omega,n-\nu,e} + c^p_{\omega ne} - ur^p_{\omega ne}}{DUR^p_{\omega n} RU_e} \geq - 1 \quad \forall p \omega ne`
 
-Detection of ramp up and ramp down state for the second block of a non-renewable (thermal) unit with minimum stable time [p.u.] «``eRampUpState``» «``eRampDwState``»
+Detection of ramp up and ramp down state for the second block of a non-renewable (thermal) unit with minimum stable time [p.u.] «``eRampUpState``» «``eRampDwState``».
+The maximum ramping rate :math:`\epsilon` is added to detect if the generator is ramping up/down. It is defined in the code as 5e-2. Below this value, the generator is considered stable.
 
-:math:`\frac{- p^p_{\omega,n-\nu,g} + p^p_{\omega ng}}{DUR^p_{\omega n} RU_g} \leq rsu^p_{\omega ng} - \epsilon \cdot rsd^p_{\omega ng} \quad \forall p \omega ng`
+:math:`\frac{- p^p_{\omega,n-\nu,t} + p^p_{\omega nt}}{DUR^p_{\omega n} RU_t} \leq rsu^p_{\omega nt} - \epsilon \cdot rsd^p_{\omega nt} \quad \forall p \omega nt`
 
-:math:`\frac{  p^p_{\omega,n-\nu,g} - p^p_{\omega ng}}{DUR^p_{\omega n} RD_g} \leq rsd^p_{\omega ng} - \epsilon \cdot rsu^p_{\omega ng} \quad \forall p \omega ng`
+:math:`\frac{  p^p_{\omega,n-\nu,t} - p^p_{\omega nt}}{DUR^p_{\omega n} RD_t} \leq rsd^p_{\omega nt} - \epsilon \cdot rsu^p_{\omega nt} \quad \forall p \omega nt`
 
 Minimum up time and down time of thermal unit [p.u.] «``eMinUpTime``» «``eMinDownTime``»
 

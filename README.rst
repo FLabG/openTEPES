@@ -1,5 +1,5 @@
 
-.. image:: https://github.com/IIT-EnergySystemModels/openTEPES/blob/master/doc/img/openTEPES.png
+.. image:: https://pascua.iit.comillas.edu/aramos/openTEPES.png
    :target: https://pascua.iit.comillas.edu/aramos/openTEPES/index.html
    :alt: logo
    :align: center
@@ -42,7 +42,7 @@ defined as a set of **generation, storage, and (electricity, hydrogen, and heat)
 
 It is integrated in the `open energy system modelling platform  <https://openenergymodels.net/>`_ helping modelling Europe's energy system.
 
-It has been used by the **Ministry for the Ecological Transition and the Demographic Challenge (MITECO)** to analyze the electricity sector in the latest Spanish `National Energy and Climate Plan (NECP) 2023-2030 <https://energia.gob.es/_layouts/15/HttpHandlerParticipacionPublicaAnexos.ashx?k=64347>`_ in June 2023.
+It has been used by the **Ministry for the Ecological Transition and the Demographic Challenge (MITECO)** to analyze the electricity sector in the latest Spanish `National Energy and Climate Plan (NECP) Update 2023-2030 <https://www.miteco.gob.es/content/dam/miteco/es/energia/files-1/pniec-2023-2030/PNIEC_2024_240924.pdf>`_ in September 2024.
 
 Reference
 ############
@@ -106,8 +106,7 @@ Installation
 ############
 `Installation guide <https://pascua.iit.comillas.edu/aramos/openTEPES_installation.pdf>`_.
 
-There are 2 ways to get all required packages under Windows. We recommend using the Python distribution Miniconda. If you don't want to use it or already have an existing Python (version 3.8 | 3.9 **recommended**, 2.7 is supported as well) installation, you can also download the required packages by yourself.
-
+There are 2 ways to get all required packages under Windows. We recommend using the Python distribution Miniconda. If you don't want to use it or already have an existing Python (version 3.11) installation, you can also download the required packages by yourself.
 
 Miniconda (recommended)
 =======================
@@ -118,7 +117,7 @@ Miniconda (recommended)
 2. **Packages and Solver**:
 
    1. Launch a new Anaconda prompt (or terminal in any IDE)
-   2. The `HiGHS 1.7.0 <https://ergo-code.github.io/HiGHS/dev/interfaces/python/#python-getting-started>`_ is our recommendation if you want a free and open-source solver.
+   2. The `HiGHS 1.7.2 <https://ergo-code.github.io/HiGHS/dev/interfaces/python/#python-getting-started>`_ is our recommendation if you want a free and open-source solver.
    3. Install openTEPES via pip by ``pip install openTEPES``
 
 Continue at `Get Started <#get-started>`_ and see the `Tips <#tips>`_.

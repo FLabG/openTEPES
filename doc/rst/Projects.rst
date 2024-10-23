@@ -4,6 +4,21 @@ Research projects
 =================
 The model has being used in these research projects:
 
+- `Quantifying the techno-economic benefits of distributed storage deployment and demand response. <https://www.iit.comillas.edu/publicacion/proyecto/en/SAMSO_BATERIAS_DR_2024/Cuantificaci%C3%B3n%20de%20los%20beneficios%20t%C3%A9cnico-econ%C3%B3micos%20del%20despliegue%20del%20almacenamiento%20distribuido%20y%20la%20respuesta%20de%20la%20demanda>`_, developed for **SAMSO, UNEF, AEPIBAL, PIMEC, OCTOPUS**.
+  September 2024 - January 2025. `C. Mateo <https://www.iit.comillas.edu/people/cmateo>`_, `J.P. Chaves <https://www.iit.comillas.edu/people/jchaves>`_, `A. Ramos <https://www.iit.comillas.edu/people/aramos>`_, `F. Martín <https://www.iit.comillas.edu/people/fmartin>`_, `T. Gómez <https://www.iit.comillas.edu/people/tomas>`_, `M. Martínez <https://www.iit.comillas.edu/people/mmartinezv>`_
+
+    It aims to quantify the value of distributed batteries and demand response in the context of the National Integrated Energy and Climate Plan (PNIEC).
+
+- `Application of the ENTSO-e cost-benefit analysis method to Conso II pumped-hydro storage <https://www.iit.comillas.edu/publicacion/proyecto/en/IberdrolaConsoIIENTSOE/Aplicaci%c3%b3n_de_la_metodolog%c3%ada_ENTSO-E_de_an%c3%a1lisis_de_coste_beneficio_al_proyecto_de_la_CH_Conso_II>`_, developed for **Iberdrola**.
+  September 2024. `L. Rouco <https://www.iit.comillas.edu/people/rouco>`_, `E. Lobato <https://www.iit.comillas.edu/people/enrique>`_, `A. Ramos <https://www.iit.comillas.edu/people/aramos>`_, `L. Olmos <https://www.iit.comillas.edu/people/olmos>`_
+
+    It aims to write a report on the application of the ENTSO-e 2024 cost-benefit analysis method to Conso II pumped-hydro storage.
+
+- `Application of the ENTSO-e cost-benefit analysis method to Aguayo II pumped-hydro storage 2024 <https://www.iit.comillas.edu/publicacion/proyecto/en/Repsol_AguayoII_2024/Aplicaci%c3%b3n_de_la_metodolog%c3%ada_ENTSO-E_de_an%c3%a1lisis_de_coste_beneficio_al_proyecto_de_la_CH_Aguayo_II_2024>`_, developed for **Repsol**.
+  June 2024 - September 2024. `A. Ramos <https://www.iit.comillas.edu/people/aramos>`_, `L. Olmos <https://www.iit.comillas.edu/people/olmos>`_, `L. Rouco <https://www.iit.comillas.edu/people/rouco>`_, `E. Lobato <https://www.iit.comillas.edu/people/enrique>`_
+
+    It aims to write a report on the application of the ENTSO-e 2024 cost-benefit analysis method to Aguayo II pumped-hydro storage.
+
 - `Electricity Market Modelling <https://www.iit.comillas.edu/publicacion/proyecto/en/REPSOL_PRED_PRECIOS/Modelado_del_mercado_el%c3%a9ctrico>`_, developed for **Repsol**.
   November 2023 - April 2024. `L. Olmos <https://www.iit.comillas.edu/people/olmos>`_, `A. Ramos <https://www.iit.comillas.edu/people/aramos>`_, `S. Gómez Sánchez <https://www.iit.comillas.edu/people/sgomez>`_
 
@@ -54,7 +69,7 @@ The model has being used in these research projects:
 
     It aims to write a presentation on the quantitative analysis of the technical and economic impact of solar thermal in the operation of the Spanish peninsular system.
 
-- Hydro generation advanced systems: modeling, control, and optimized integration to the system (AVANHID), developed for the **Ministry of Science and Innovation/State Research Agency** (10.13039/501100011033) under the program **Public-Private Partnerships** with **NextGenerationEU/PRTR** funds (CPP2021-009114). December 2022 - November 2025.
+- Hydro generation advanced systems: modeling, control, and optimized integration to the system (AVANHID), developed for the **Ministry of Science and Innovation/State Research Agency** (10.13039/501100011033) under the program **Public-Private Partnerships** with **NextGenerationEU/PRTR** funds (CPP2021-009114). October 2022 - September 2025.
   `A. Ramos <https://www.iit.comillas.edu/people/aramos>`_, `J.M. Latorre <https://www.iit.comillas.edu/people/jesuslc>`_, `P. Dueñas <https://www.iit.comillas.edu/people/pduenas>`_, `L. Rouco <https://www.iit.comillas.edu/people/rouco>`_, `L. Sigrist <https://www.iit.comillas.edu/people/lsigrist>`_, `I. Egido <https://www.iit.comillas.edu/people/egido>`_, `J.D. Gómez Pérez <https://www.iit.comillas.edu/people/jdgomez>`_, `F. Labora <https://www.iit.comillas.edu/people/flabora>`_
 
 .. image:: ../img/ColabPP.jpg

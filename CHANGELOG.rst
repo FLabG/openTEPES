@@ -1,8 +1,32 @@
 Change Log
 =============
 
-[4.17.4] - 2024-08-08
+[4.17.8] - 2024-10-23
+-----------------------
+- [CHANGED] name of the solver log file
+- [FIXED] fix some typos in output results
+- [FIXED] writing of the GenerationSurplusHeat file
+- [FIXED] computation of pMaxPowerHeat
+- [FIXED] computation of net demand per node in output results
+- [CHANGED] if no ending year is given in the input data, the last year is considered year 3000
+- [CHANGED] control of invalid electric lines, hydrogen lines, and heat pipelines
+- [CHANGED] added colum of MEUR/year in cost summary files
+- [CHANGED] added information regarding detected infeasibilities
+- [FIXED] lower bound only for VRE units
+- [FIXED] computation of curtailment in the output results for generation candidates
+
+[4.17.7] - 2024-09-20
+-----------------------
+- [CHANGED] redefinition of all sets, removing the order of the elements, and the lambda function to filter the elements
+-[CHANGED] enabling assert of the objective function in the test run
+
+[4.17.5] - 2024-09-18
 ----------------------
+- [FIXED] avoid degeneracy when ordering generating units by increasing variable costs
+
+[4.17.4] - 2024-09-12
+----------------------
+- [FIXED] avoid considering the hydro units as marginal incremental generators
 - [CHANGED] split generation and consumption in ESS technologies
 - [FIXED] fix error when solving by stages
 - [FIXED] fix error in writing investment output results
