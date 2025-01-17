@@ -97,10 +97,11 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
         mTEPES.Stage[st].n2 = Set(doc='load levels', initialize=[nn for nn in mTEPES.nn if (p, sc, st, nn) in mTEPES.s2n])
 
         # load levels multiple of cycles for each ESS/generator
-        mTEPES.Stage[st].nesc = [(n, es) for n, es in mTEPES.n * mTEPES.es if mTEPES.n.ord(n) % mTEPES.pStorageTimeStep[es] == 0]
-        mTEPES.Stage[st].necc = [(n, ec) for n, ec in mTEPES.n * mTEPES.ec if mTEPES.n.ord(n) % mTEPES.pStorageTimeStep[ec] == 0]
-        mTEPES.Stage[st].neso = [(n, es) for n, es in mTEPES.n * mTEPES.es if mTEPES.n.ord(n) % mTEPES.pOutflowsTimeStep[es] == 0]
-        mTEPES.Stage[st].ngen = [(n, g) for n, g in mTEPES.n * mTEPES.g if mTEPES.n.ord(n) % mTEPES.pEnergyTimeStep[g] == 0]
+        mTEPES.Stage[st].nesc = [(n, es) for n, es in mTEPES.Stage[st].n * mTEPES.es if mTEPES.Stage[st].n.ord(n) % mTEPES.pStorageTimeStep[es] == 0]
+        mTEPES.Stage[st].necc = [(n, ec) for n, ec in mTEPES.Stage[st].n * mTEPES.ec if mTEPES.Stage[st].n.ord(n) % mTEPES.pStorageTimeStep[ec] == 0]
+        mTEPES.Stage[st].neso = [(n, es) for n, es in mTEPES.Stage[st].n * mTEPES.es if mTEPES.Stage[st].n.ord(n) % mTEPES.pOutflowsTimeStep[es] == 0]
+        mTEPES.Stage[st].ngen = [(n, g) for n, g in mTEPES.Stage[st].n * mTEPES.g if mTEPES.Stage[st].n.ord(n) % mTEPES.pEnergyTimeStep[g] == 0]
+
         if mTEPES.pIndHydroTopology == 1:
             mTEPES.nhc      = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
             if sum(1 for h,rs in mTEPES.p2r):
