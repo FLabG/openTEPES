@@ -27,6 +27,40 @@ def TotalObjectiveFunction(OptModel, mTEPES, pIndLogConsole):
     if pIndLogConsole == 1:
         print('Total fixed and variable costs         ... ', round(GeneratingTime), 's')
 
+def ScenarioObjectiveFunction(OptModel, mTEPES, pIndLogConsole,p,sc):
+    print('Period cost o.f.      model formulation ****')
+
+    StartTime = time.time()
+
+    def eScenarioSCost(OptModel):
+        return OptModel.vTotalSCost
+    OptModel.eTotalSCost = Objective(rule=eScenarioSCost, sense=minimize, doc='total system cost [MEUR]')
+
+    def eScenarioTCost(OptModel):
+        return OptModel.vTotalSCost == OptModel.vTotalICost + sum(mTEPES.pDiscountedWeight[p] * mTEPES.pScenProb[p,sc]() * (OptModel.vTotalGCost[p,sc,n] + OptModel.vTotalCCost[p,sc,n] + OptModel.vTotalECost[p,sc,n] + OptModel.vTotalRCost[p,sc,n]) for n in mTEPES.Scenario[sc].n)
+    OptModel.eTotalTCost = Constraint(rule=eScenarioTCost, doc='total system cost [MEUR]')
+
+    GeneratingTime = time.time() - StartTime
+    if pIndLogConsole == 1:
+        print('Total fixed and variable costs         ... ', round(GeneratingTime), 's')
+
+def StageObjectiveFunction(OptModel, mTEPES, pIndLogConsole,p,sc,st):
+    print('Period cost o.f.      model formulation ****')
+
+    StartTime = time.time()
+
+    def eStageSCost(OptModel):
+        return OptModel.vTotalSCost
+    OptModel.eTotalSCost = Objective(rule=eStageSCost, sense=minimize, doc='total system cost [MEUR]')
+
+    def eStageTCost(OptModel):
+        return OptModel.vTotalSCost == sum(mTEPES.pDiscountedWeight[p] * mTEPES.pScenProb[p,sc]() * (OptModel.vTotalGCost[p,sc,n] + OptModel.vTotalCCost[p,sc,n] + OptModel.vTotalECost[p,sc,n] + OptModel.vTotalRCost[p,sc,n]) for n in mTEPES.Stage[st].n)
+    OptModel.eTotalTCost = Constraint(rule=eStageTCost, doc='total system cost [MEUR]')
+
+    GeneratingTime = time.time() - StartTime
+    if pIndLogConsole == 1:
+        print('Total fixed and variable costs         ... ', round(GeneratingTime), 's')
+
 
 def InvestmentModelFormulation(OptModel, mTEPES, pIndLogConsole):
     print('Investment           model formulation ****')

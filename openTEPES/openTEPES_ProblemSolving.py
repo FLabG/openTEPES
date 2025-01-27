@@ -75,6 +75,7 @@ def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConso
     idx = 0
     for var in OptModel.component_data_objects(pyo.Var, active=True, descend_into=True):
         if not var.is_continuous():
+            print("trucutrucu")
             idx += 1
     if idx == 0:
         OptModel.dual = Suffix(direction=Suffix.IMPORT_EXPORT)

@@ -12,13 +12,13 @@ import pyomo.environ as pyo
 from   pyomo.environ import ConcreteModel, Set, Block, Param, Boolean
 
 from .openTEPES_InputData        import InputData, SettingUpVariables
-from .openTEPES_ModelFormulation import TotalObjectiveFunction, InvestmentModelFormulation, GenerationOperationModelFormulationObjFunct, GenerationOperationModelFormulationInvestment, GenerationOperationModelFormulationDemand, GenerationOperationModelFormulationStorage, GenerationOperationModelFormulationReservoir, NetworkH2OperationModelFormulation, NetworkHeatOperationModelFormulation, GenerationOperationModelFormulationCommitment, GenerationOperationModelFormulationRampMinTime, NetworkSwitchingModelFormulation, NetworkOperationModelFormulation, NetworkCycles, CycleConstraints
+from .openTEPES_ModelFormulation import TotalObjectiveFunction, InvestmentModelFormulation, ScenarioObjectiveFunction, StageObjectiveFunction, GenerationOperationModelFormulationObjFunct, GenerationOperationModelFormulationInvestment, GenerationOperationModelFormulationDemand, GenerationOperationModelFormulationStorage, GenerationOperationModelFormulationReservoir, NetworkH2OperationModelFormulation, NetworkHeatOperationModelFormulation, GenerationOperationModelFormulationCommitment, GenerationOperationModelFormulationRampMinTime, NetworkSwitchingModelFormulation, NetworkOperationModelFormulation, NetworkCycles, CycleConstraints
 from .openTEPES_ProblemSolving   import ProblemSolving
 from .openTEPES_OutputResults    import OutputResultsParVarCon, InvestmentResults, GenerationOperationResults, GenerationOperationHeatResults, ESSOperationResults, ReservoirOperationResults, NetworkH2OperationResults, NetworkHeatOperationResults, FlexibilityResults, NetworkOperationResults, MarginalResults, OperationSummaryResults, ReliabilityResults, CostSummaryResults, EconomicResults, NetworkMapResults
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def WriteLP(mTEPES,_path,CaseName):
+def WriteLP(mTEPES,_path,CaseName,p,sc,st):
     StartTime = time.time()
     mTEPES.write(f'{_path}/openTEPES_{CaseName}_{p}_{sc}_{st}.lp', io_options={'symbolic_solver_labels': True})
     WritingLPFileTime = time.time() - StartTime
@@ -44,6 +44,49 @@ def GenerateModel(mTEPES,pIndLogConsole,pIndCycleFlow,p,sc,st,):
         if st == mTEPES.First_st:
             NetworkCycles(mTEPES, pIndLogConsole)
         CycleConstraints(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+
+def GenerateAndSolveModel(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName):
+    TotalObjectiveFunction(mTEPES, mTEPES, pIndLogConsole)
+    InvestmentModelFormulation(mTEPES, mTEPES, pIndLogConsole)
+    for p, sc, st in mTEPES.psc * mTEPES.stt:
+        print(f"Generando {p},{sc},{st}")
+        GenerateModel(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
+
+    if pIndLogConsole == 1:
+        StartTime = time.time()
+        mTEPES.write(f'{_path}/openTEPES_{CaseName}.lp', io_options={'symbolic_solver_labels': True})
+        WritingLPFileTime = time.time() - StartTime
+        StartTime = time.time()
+        print('Writing LP file                        ... ', round(WritingLPFileTime), 's')
+    ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+
+def GenerateAndSolveScenarios(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName):
+    for p,sc in mTEPES.psc:
+        ScenarioObjectiveFunction(mTEPES, mTEPES, pIndLogConsole, p, sc)
+        for st in mTEPES.stt:
+            GenerateModel(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
+            if pIndLogConsole == 1:
+                StartTime = time.time()
+                mTEPES.write(f'{_path}/openTEPES_{CaseName}_{p}_{sc}.lp', io_options={'symbolic_solver_labels': True})
+                WritingLPFileTime = time.time() - StartTime
+                StartTime = time.time()
+                print('Writing LP file                        ... ', round(WritingLPFileTime), 's')
+        ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+
+def GenerateAndSolveStages(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName):
+    for p, sc, st in mTEPES.psc * mTEPES.stt:
+        StageObjectiveFunction(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+        GenerateModel(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
+        if pIndLogConsole == 1:
+            if pIndLogConsole == 1:
+                StartTime = time.time()
+                mTEPES.write(f'{_path}/openTEPES_{CaseName}_{p}_{sc}_{st}.lp', io_options={'symbolic_solver_labels': True})
+                WritingLPFileTime = time.time() - StartTime
+                StartTime = time.time()
+                print('Writing LP file                        ... ', round(WritingLPFileTime), 's')
+        ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+
+
 def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConsole):
 
     InitialTime = time.time()
@@ -90,8 +133,7 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
         mTEPES.Last_st = st
 
     # objective function and investment constraints
-    TotalObjectiveFunction    (mTEPES, mTEPES, pIndLogConsole)
-    InvestmentModelFormulation(mTEPES, mTEPES, pIndLogConsole)
+
 
     # initialize parameter for dual variables
     mTEPES.pDuals = {}
@@ -99,52 +141,32 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
     # control for not repeating the stages in case of several ones
     mTEPES.NoRepetition = 0
     StIndep = ScIndep = False
-    mTEPES.IndependentPeriods = Param(domaain=Boolean, initialize=False, mutable=True)
+    mTEPES.IndependentPeriods = Param(domain=Boolean, initialize=False, mutable=True)
     mTEPES.IndependentStages = Param(mTEPES.pp, domain = Boolean, initialize=False, mutable=True)
+    mTEPES.IndependentStages2 = Param(domain=Boolean, initialize=False, mutable=True)
     mTEPES.Parallel = Param(domain=Boolean, initialize=False, mutable=True)
     mTEPES.Parallel = True
-    for p in mTEPES.pp:
-        if (    (len(mTEPES.gc) == 0 or mTEPES.pIndBinGenInvest()     == 2)   # No candidates
-            and (len(mTEPES.gd) == 0 or mTEPES.pIndBinGenRetire()     == 2)   # No retirements
-            and (len(mTEPES.lc) == 0 or mTEPES.pIndBinNetElecInvest() == 2)): # No line candidates
-            # Periods and scenarios are independent from each other
-            ScIndep = True
-            mTEPES.IndependentPeriods = True
-            for p in mTEPES.pp:
-                for sc,st in mTEPES.sc * mTEPES.st:
-                    GenerateModel(mTEPES,pIndLogConsole,pIndCycleFlow,p,sc,st)
-                    if pIndLogConsole == 1:
-                        #PeriodObjectiveFunction()
-                        WriteLP(mTEPES,_path,CaseName)
-                        ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
-
-
-
-
-            mTEPES.IndependentPeriods = True
-            if (   (min([mTEPES.pEmission[p, ar] for ar in mTEPES.ar]) == math.inf or sum(mTEPES.pEmissionRate[nr] for nr in mTEPES.nr) == 0)  # No emissions
-                and max(mTEPES.pRESEnergy[p, ar] for ar in mTEPES.ar == 0)):  # No minimum RES requirements
+    if (    (len(mTEPES.gc) == 0 or mTEPES.pIndBinGenInvest()     == 2)   # No candidates
+        and (len(mTEPES.gd) == 0 or mTEPES.pIndBinGenRetire()     == 2)   # No retirements
+        and (len(mTEPES.lc) == 0 or mTEPES.pIndBinNetElecInvest() == 2)): # No line candidates
+        # Periods and scenarios are independent from each other
+        ScIndep = True
+        mTEPES.IndependentPeriods = True
+        for p in mTEPES.pp:
+            if (    (min([mTEPES.pEmission[p, ar] for ar in mTEPES.ar]) == math.inf or sum(mTEPES.pEmissionRate[nr] for nr in mTEPES.nr) == 0)  # No emissions
+                and (max([mTEPES.pRESEnergy[p, ar] for ar in mTEPES.ar]) == 0)):  # No minimum RES requirements
             # Stages are independent from each other
                 StIndep = True
                 mTEPES.IndependentStages[p] = True
-                for p,sc in mTEPES.psc:
-                    for st in mTEPES.st:
-                        GenerateModel(mTEPES,pIndLogConsole,pIndCycleFlow,p,sc,st)
-                        if pIndLogConsole == 1:
-                            WriteLP(mTEPES,_path,CaseName)
-                            ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    if all(mTEPES.IndependentStages[p]() for p in mTEPES.pp):
+        mTEPES.IndependentStages2 = True
 
-    if mTEPES.IndependentPeriods == True and mTEPES.IndependentStages:
-        for p in mTEPES.pp:
-            for sc, st in mTEPES.sc * mTEPES.st:
-                GenerateModel(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
-                if pIndLogConsole == 1:
-                    WriteLP(mTEPES, _path, CaseName)
-                    ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
 
     # iterative model formulation for each stage of a year
     mTEPES.Stage = Block(mTEPES.stt)
+    print("lululululu")
     for st in mTEPES.Stage:
+        print("lololololo")
         # mTEPES.Stage[st].n = Set(doc='load levels', initialize=[nn for nn in mTEPES.nn if (p, sc, st, nn) in mTEPES.s2n])
         # mTEPES.Stage[st].n2 = Set(doc='load levels', initialize=[nn for nn in mTEPES.nn if (p, sc, st, nn) in mTEPES.s2n])
         #
@@ -163,9 +185,6 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
         mTEPES.Stage[st].neso = [(n, es) for n, es in mTEPES.Stage[st].n * mTEPES.es if mTEPES.Stage[st].n.ord(n) % mTEPES.pOutflowsTimeStep[es] == 0]
         mTEPES.Stage[st].ngen = [(n, g) for n, g in mTEPES.Stage[st].n * mTEPES.g if mTEPES.Stage[st].n.ord(n) % mTEPES.pEnergyTimeStep[g] == 0]
 
-
-
-
         if mTEPES.pIndHydroTopology == 1:
             mTEPES.Stage[st].nhc      = [(n,h ) for n,h  in mTEPES.Stage[st].n*mTEPES.h  if mTEPES.Stage[st].n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
             if sum(1 for h,rs in mTEPES.p2r):
@@ -179,119 +198,55 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
             mTEPES.Stage[st].nrsc     = [(n,rs) for n,rs in mTEPES.Stage[st].n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
             mTEPES.Stage[st].nrcc     = [(n,rs) for n,rs in mTEPES.Stage[st].n*mTEPES.rn if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
             mTEPES.Stage[st].nrso     = [(n,rs) for n,rs in mTEPES.Stage[st].n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pWaterOutTimeStep [rs] == 0]
-    # for p,sc,st in mTEPES.ps*mTEPES.stt:
-    def LoopPScSt(p,sc,st):
-        # mTEPES.Stage[st].st = Set(doc='stages',      initialize=[stt for stt in mTEPES.stt if st == stt if mTEPES.pStageWeight[stt] and sum(1 for (p,sc,st,nn) in mTEPES.s2n)])
 
-        # load levels up to the current stage for emission and RES energy constraints
-        # if (p != mTEPES.p.first() or sc != mTEPES.sc.first()) and st == mTEPES.First_st:
-        #     mTEPES.del_component(mTEPES.na)
-
-        print(f'Period {p}, Scenario {sc}, Stage {st}')
-
-        # operation model objective function and constraints by stage
-
-
-        #No investment, retirement, emission limit or RES requirements
+    mTEPES.Scenario = Block(mTEPES.sc)
+    for sc in mTEPES.Scenario:
+        print("wawawawawawa")
+        mTEPES.Scenario[sc].n = Set(doc='load levels', initialize=[nn for p, scc, st, nn in mTEPES.s2n if scc == sc])
 
 
 
-            if pIndLogConsole == 1:
-                WriteLP()
+    if mTEPES.IndependentPeriods() == False: #There is investment and the problem needs to be solved as a whole
+        print("Not parallel")
+        GenerateAndSolveModel(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName)
 
-            # there are no expansion decisions, or they are ignored (it is an operation planning model)
-            mTEPES.pScenProb[p,sc] = 1.0
-            print("solving some stage reached")
-            ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
-            mTEPES.pScenProb[p,sc] = 0.0
-            # deactivate the constraints of the previous period and scenario
-            for c in mTEPES.component_objects(pyo.Constraint, active=True):
-                if c.name.find(str(p)) != -1 and c.name.find(str(sc)) != -1:
-                    c.deactivate()
-        else:
-            if (p,sc) == mTEPES.ps.last() and st == mTEPES.Last_st and mTEPES.NoRepetition == 0:
-                mTEPES.NoRepetition = 1
+    if mTEPES.IndependentPeriods() == True and mTEPES.IndependentStages2() == False: #No investment but emissions or RES requirements linking stages together
+        print("parallel Scenarios")
+        GenerateAndSolveScenarios(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName)
 
-                # mTEPES.del_component(mTEPES.st)
-                # mTEPES.del_component(mTEPES.n )
-                # mTEPES.del_component(mTEPES.n2)
-                # mTEPES.st = Set(doc='stages',      initialize=[stt for stt in mTEPES.stt if mTEPES.pStageWeight[stt] and sum(1 for                                    p,sc,stt,nn  in mTEPES.s2n)])
-                # mTEPES.n  = Set(doc='load levels', initialize=[nn  for nn  in mTEPES.nn  if                              sum(1 for p,sc,st in mTEPES.ps*mTEPES.st if (p,sc,st, nn) in mTEPES.s2n)])
-                # mTEPES.n2 = Set(doc='load levels', initialize=[nn  for nn  in mTEPES.nn  if                              sum(1 for p,sc,st in mTEPES.ps*mTEPES.st if (p,sc,st, nn) in mTEPES.s2n)])
-                #
-                # # load levels multiple of cycles for each ESS/generator
-                # mTEPES.nesc         = [(n,es) for n,es in mTEPES.n*mTEPES.es if mTEPES.n.ord(n) %     mTEPES.pStorageTimeStep [es] == 0]
-                # mTEPES.necc         = [(n,ec) for n,ec in mTEPES.n*mTEPES.ec if mTEPES.n.ord(n) %     mTEPES.pStorageTimeStep [ec] == 0]
-                # mTEPES.neso         = [(n,es) for n,es in mTEPES.n*mTEPES.es if mTEPES.n.ord(n) %     mTEPES.pOutflowsTimeStep[es] == 0]
-                # mTEPES.ngen         = [(n,g ) for n,g  in mTEPES.n*mTEPES.g  if mTEPES.n.ord(n) %     mTEPES.pEnergyTimeStep  [g ] == 0]
-                # if mTEPES.pIndHydroTopology == 1:
-                #     mTEPES.nhc      = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
-                #     if sum(1 for h,rs in mTEPES.p2r):
-                #         mTEPES.np2c = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) == 0]
-                #     else:
-                #         mTEPES.np2c = []
-                #     if sum(1 for rs,h in mTEPES.r2p):
-                #         mTEPES.npc  = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) == 0]
-                #     else:
-                #         mTEPES.npc  = []
-                #     mTEPES.nrsc     = [(n,rs) for n,rs in mTEPES.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
-                #     mTEPES.nrcc     = [(n,rs) for n,rs in mTEPES.n*mTEPES.rn if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
-                #     mTEPES.nrso     = [(n,rs) for n,rs in mTEPES.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pWaterOutTimeStep [rs] == 0]
+    if mTEPES.IndependentPeriods() == True and mTEPES.IndependentStages2() == True: #All stages are independent from each other so they can be solved separately
+        print("parallel Stages")
+        GenerateAndSolveStages(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName)
 
-                if pIndLogConsole == 1:
-                    StartTime         = time.time()
-                    mTEPES.write(f'{_path}/openTEPES_{CaseName}_{p}_{sc}_{st}.lp', io_options={'symbolic_solver_labels': True})
-                    WritingLPFileTime = time.time() - StartTime
-                    StartTime         = time.time()
-                    print('Writing LP file                        ... ', round(WritingLPFileTime), 's')
+    # paral = False
+    # print(f"Paral:{paral}")
+    #
+    # if paral == True:
+    #     with ThreadPoolExecutor() as executor:
+    #         # Create tasks for each (p, sc, st) combination
+    #         futures = [
+    #             executor.submit(LoopPScSt, p, sc, st)
+    #             for p, sc, st in mTEPES.ps * mTEPES.stt
+    #         ]
+    #
+    #         # Optionally, wait for all tasks to complete
+    #         for future in as_completed(futures):
+    #             try:
+    #                 future.result()  # Wait for each task to complete
+    #             except Exception as e:
+    #                 print(f"Task raised an exception: {e}")
+    #
+    # if paral == False:
+    #     for p, sc, st in mTEPES.ps * mTEPES.stt:
+    #         LoopPScSt(p,sc,st)
 
-                # there are investment decisions (it is an expansion and operation planning model)
-                print("Last stage reached")
-                ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
-
-    paral = False
-    print(f"Paral:{paral}")
-
-    if paral == True:
-        with ThreadPoolExecutor() as executor:
-            # Create tasks for each (p, sc, st) combination
-            futures = [
-                executor.submit(LoopPScSt, p, sc, st)
-                for p, sc, st in mTEPES.ps * mTEPES.stt
-            ]
-
-            # Optionally, wait for all tasks to complete
-            for future in as_completed(futures):
-                try:
-                    future.result()  # Wait for each task to complete
-                except Exception as e:
-                    print(f"Task raised an exception: {e}")
-
-    if paral == False:
-        for p, sc, st in mTEPES.ps * mTEPES.stt:
-            LoopPScSt(p,sc,st)
-
-    if mTEPES.pIndHydroTopology == 1:
-        mTEPES.nhc      = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
-        if sum(1 for h,rs in mTEPES.p2r):
-            mTEPES.np2c = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) == 0]
-        else:
-            mTEPES.np2c = []
-        if sum(1 for rs,h in mTEPES.r2p):
-            mTEPES.npc  = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) == 0]
-        else:
-            mTEPES.npc  = []
-        mTEPES.nrsc     = [(n,rs) for n,rs in mTEPES.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
-        mTEPES.nrcc     = [(n,rs) for n,rs in mTEPES.n*mTEPES.rn if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
-        mTEPES.nrso     = [(n,rs) for n,rs in mTEPES.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pWaterOutTimeStep [rs] == 0]
-
-    # activate the constraints of all the periods and scenarios
-    for c in mTEPES.component_objects(pyo.Constraint):
-        c.activate()
-
-    # assign probability 1 to all the periods and scenarios
-    for p,sc in mTEPES.ps:
-        mTEPES.pScenProb[p,sc] = 1.0
+    # # activate the constraints of all the periods and scenarios
+    # for c in mTEPES.component_objects(pyo.Constraint):
+    #     c.activate()
+    #
+    # # assign probability 1 to all the periods and scenarios
+    # for p,sc in mTEPES.ps:
+    #     mTEPES.pScenProb[p,sc] = 1.0
 
     # pickle the case study data
     # with open(dump_folder+f'/oT_Case_{CaseName}.pkl','wb') as f:
