@@ -138,7 +138,11 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
                     NetworkCycles                           (        mTEPES, pIndLogConsole           )
                 CycleConstraints                            (mTEPES, mTEPES, pIndLogConsole, p, sc, st)
 
-            if (len(mTEPES.gc) == 0 or (len(mTEPES.gc) > 0 and mTEPES.pIndBinGenInvest() == 2)) and (len(mTEPES.gd) == 0 or (len(mTEPES.gd) > 0 and mTEPES.pIndBinGenRetire() == 2)) and (len(mTEPES.lc) == 0 or (len(mTEPES.lc) > 0 and mTEPES.pIndBinNetElecInvest() == 2)) and (min([mTEPES.pEmission[p,ar] for ar in mTEPES.ar]) == math.inf or sum(mTEPES.pEmissionRate[nr] for nr in mTEPES.nr) == 0):
+             if (    (len(mTEPES.gc) == 0 or mTEPES.pIndBinGenInvest()     == 2)   # No generator investments
+                 and (len(mTEPES.gd) == 0 or mTEPES.pIndBinGenRetire()     == 2)   # No generator retirements
+                 and (len(mTEPES.lc) == 0 or mTEPES.pIndBinNetElecInvest() == 2)   # No line      investments
+                 and  max(mTEPES.pRESEnergy[p, ar] for ar in mTEPES.ar     == 0)   # No minimum RES requirements
+                 and (min([mTEPES.pEmission[p, ar] for ar in mTEPES.ar])   == math.inf or sum(mTEPES.pEmissionRate[nr] for nr in mTEPES.nr) == 0)):  # No emission limit
 
                 if pIndLogConsole == 1:
                     StartTime         = time.time()
