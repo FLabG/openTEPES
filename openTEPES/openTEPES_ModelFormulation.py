@@ -319,8 +319,9 @@ def GenerationOperationModelFormulationInvestment(OptModel, mTEPES, pIndLogConso
         print('eAdeqReserveMarginHeat... ', len(getattr(OptModel, f'eAdequacyReserveMarginHeat_{p}_{sc}_{st}')), ' rows')
 
     def eMaxSystemEmission(OptModel,ar):
-        if mTEPES.pEmission[p,ar] < math.inf and st == mTEPES.Last_st and sum(mTEPES.pEmissionVarCost[p,sc,na,nr] for na,nr in mTEPES.na*mTEPES.nr if (ar,nr) in mTEPES.a2g):
-            return sum(OptModel.vTotalECostArea[p,sc,na,ar]/mTEPES.pCO2Cost for na in mTEPES.na) <= mTEPES.pEmission[p,ar]
+        #If no emission limit is set, this is the last stage in the model and there is emission generation
+        if mTEPES.pEmission[p,ar] < math.inf and st == mTEPES.Last_st and sum(mTEPES.pEmissionVarCost[p,sc,n,nr] for n,nr in mTEPES.n*mTEPES.nr if (ar,nr) in mTEPES.a2g):
+            return sum(OptModel.vTotalECostArea[p,sc,n,ar]/mTEPES.pCO2Cost for n in mTEPES.n) <= mTEPES.pEmission[p,ar]
         else:
             return Constraint.Skip
     setattr(OptModel, f'eMaxSystemEmission_{p}_{sc}_{st}', Constraint(mTEPES.ar, rule=eMaxSystemEmission, doc='maximum CO2 emission [tCO2]'))
@@ -330,7 +331,7 @@ def GenerationOperationModelFormulationInvestment(OptModel, mTEPES, pIndLogConso
 
     def eMinSystemRESEnergy(OptModel,ar):
         if mTEPES.pRESEnergy[p,ar] and st == mTEPES.Last_st:
-            return sum(OptModel.vTotalRESEnergyArea[p,sc,na,ar] for na in mTEPES.na)/sum(mTEPES.pLoadLevelDuration[p,sc,na] for na in mTEPES.na) >= mTEPES.pRESEnergy[p,ar]/sum(mTEPES.pLoadLevelDuration[p,sc,na] for na in mTEPES.na)
+            return sum(OptModel.vTotalRESEnergyArea[p,sc,n,ar] for n in mTEPES.n)/sum(mTEPES.pLoadLevelDuration[p,sc,n] for n in mTEPES.n) >= mTEPES.pRESEnergy[p,ar]/sum(mTEPES.pLoadLevelDuration[p,sc,n] for n in mTEPES.n)
         else:
             return Constraint.Skip
     setattr(OptModel, f'eMinSystemRESEnergy_{p}_{sc}_{st}', Constraint(mTEPES.ar, rule=eMinSystemRESEnergy, doc='minimum RES energy [GW]'))
