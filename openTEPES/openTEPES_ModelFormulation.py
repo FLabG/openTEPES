@@ -171,8 +171,8 @@ def GenerationOperationModelFormulationObjFunct(OptModel, mTEPES, pIndLogConsole
     setattr(OptModel, f'eTotalECost_{p}_{sc}_{st}', Constraint(mTEPES.n, rule=eTotalECost, doc='system emission cost [MEUR]'))
     def eTotalEmissionArea(OptModel,n,ar):
         if sum(mTEPES.pEmissionRate[g] for g in mTEPES.g if (ar, g) in mTEPES.a2g and (p, g) in mTEPES.pg):
-            return OptModel.vTotalEmissionArea[p, sc, n, ar] == (sum(mTEPES.pLoadLevelDuration[p, sc, n]() * mTEPES.pEmissionRate[p, sc, n, nr] * OptModel.vTotalOutput    [p, sc, n, nr] for nr in mTEPES.nr if (ar, nr) in mTEPES.a2g and (p, nr) in mTEPES.pnr)
-                                                               + sum(mTEPES.pLoadLevelDuration[p, sc, n]() * mTEPES.pEmissionRate[p, sc, n, bo] * OptModel.vTotalOutputHeat[p, sc, n, bo] for bo in mTEPES.bo if (ar, bo) in mTEPES.a2g and (p, bo) in mTEPES.pbo))
+            return OptModel.vTotalEmissionArea[p, sc, n, ar] == (sum(mTEPES.pLoadLevelDuration[p, sc, n]() * mTEPES.pEmissionRate[nr] * OptModel.vTotalOutput    [p, sc, n, nr] for nr in mTEPES.nr if (ar, nr) in mTEPES.a2g and (p, nr) in mTEPES.pnr)
+                                                               + sum(mTEPES.pLoadLevelDuration[p, sc, n]() * mTEPES.pEmissionRate[bo] * OptModel.vTotalOutputHeat[p, sc, n, bo] for bo in mTEPES.bo if (ar, bo) in mTEPES.a2g and (p, bo) in mTEPES.pbo))
         else:
             return Constraint.Skip
     setattr(OptModel, f'eTotalEmissionArea_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.ar, rule=eTotalEmissionArea, doc='area total emission [MtCO2 eq]'))
