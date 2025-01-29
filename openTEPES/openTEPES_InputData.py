@@ -407,7 +407,7 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     pRampUp                     = dfGeneration  ['RampUp'                    ] * 1e-3                                               # ramp up   rate                               [GW/h]
     pRampDw                     = dfGeneration  ['RampDown'                  ] * 1e-3                                               # ramp down rate                               [GW/h]
     pEmissionCost               = dfGeneration  ['CO2EmissionRate'           ] * 1e-3 * pCO2Cost                                    # CO2 emission  cost                           [MEUR/GWh]
-    pEmissionRate               = dfGeneration  ['CO2EmissionRate'           ] * 1e-3                                               # CO2 emission  rate                           [MtCO2/GWh]
+    pEmissionRate               = dfGeneration  ['CO2EmissionRate'           ]                                                      # CO2 emission  rate                           [MtCO2/GWh]
     pUpTime                     = dfGeneration  ['UpTime'                    ]                                                      # minimum up     time                          [h]
     pDwTime                     = dfGeneration  ['DownTime'                  ]                                                      # minimum down   time                          [h]
     pStableTime                 = dfGeneration  ['StableTime'                ]                                                      # minimum stable time                          [h]
@@ -878,7 +878,7 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
 
     # variable emission cost [M€/GWh]
     pVariableEmissionCost = pVariableEmissionCost.replace(0.0, pCO2Cost) #[€/tCO2]
-    pEmissionVarCost      = pEmissionRate * pVariableEmissionCost                 #[M€/GWh] = [MtCO2/GWh] * [€/tCO2]
+    pEmissionVarCost      = pEmissionRate * 1e-3 * pVariableEmissionCost                 #[M€/GWh] = [tCO2/MWh] * 1e-3 * [€/tCO2]
     pEmissionVarCost      = pEmissionVarCost.reindex(sorted(pEmissionVarCost.columns), axis=1)
 
     # minimum up- and downtime and maximum shift time converted to an integer number of time steps
