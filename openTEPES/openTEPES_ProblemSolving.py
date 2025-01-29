@@ -136,7 +136,7 @@ def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConso
     for con in OptModel.component_objects(pyo.Constraint, active=True):
         if con.is_indexed():
             for index in con:
-                    pDuals[str(con.name) + str(index)] = OptModel.dual[con[index]]
+                pDuals[str(con.name) + str(index)] = OptModel.dual[con[index]]
 
     mTEPES.pDuals.update(pDuals)
 
