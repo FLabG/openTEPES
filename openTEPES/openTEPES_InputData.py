@@ -407,7 +407,7 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     pRampUp                     = dfGeneration  ['RampUp'                    ] * 1e-3                                               # ramp up   rate                               [GW/h]
     pRampDw                     = dfGeneration  ['RampDown'                  ] * 1e-3                                               # ramp down rate                               [GW/h]
     pEmissionCost               = dfGeneration  ['CO2EmissionRate'           ] * 1e-3 * pCO2Cost                                    # CO2 emission  cost                           [MEUR/GWh]
-    pEmissionRate               = dfGeneration  ['CO2EmissionRate'           ]                                                      # CO2 emission  rate                           [MtCO2/GWh]
+    pEmissionRate               = dfGeneration  ['CO2EmissionRate'           ]                                                      # CO2 emission  rate                           [tCO2/MWh]
     pUpTime                     = dfGeneration  ['UpTime'                    ]                                                      # minimum up     time                          [h]
     pDwTime                     = dfGeneration  ['DownTime'                  ]                                                      # minimum down   time                          [h]
     pStableTime                 = dfGeneration  ['StableTime'                ]                                                      # minimum stable time                          [h]
