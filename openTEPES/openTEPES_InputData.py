@@ -9,7 +9,7 @@ import os
 import pandas        as pd
 from   collections   import defaultdict
 from   pyomo.environ import DataPortal, Set, Param, Var, Binary, NonNegativeReals, NonNegativeIntegers, PositiveReals, PositiveIntegers, Reals, UnitInterval, Any
-
+from   pyomo.environ import ConcreteModel, Set, Block, Param, Boolean
 
 def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     print('Input data                             ****')
@@ -2449,6 +2449,78 @@ def SettingUpVariables(OptModel, mTEPES):
     DetectInfeasibilities(mTEPES)
 
     mTEPES.nFixedVariables = Param(initialize=round(nFixedVariables), within=NonNegativeIntegers, doc='Number of fixed variables')
+
+    mTEPES.IndependentPeriods = Param(domain=Boolean, initialize=False, mutable=True)
+    mTEPES.IndependentStages = Param(mTEPES.pp, domain = Boolean, initialize=False, mutable=True)
+    mTEPES.IndependentStages2 = Param(domain=Boolean, initialize=False, mutable=True)
+    mTEPES.Parallel = Param(domain=Boolean, initialize=False, mutable=True)
+    mTEPES.Parallel = True
+    if (    (len(mTEPES.gc) == 0 or mTEPES.pIndBinGenInvest()     == 2)   # No candidates
+        and (len(mTEPES.gd) == 0 or mTEPES.pIndBinGenRetire()     == 2)   # No retirements
+        and (len(mTEPES.lc) == 0 or mTEPES.pIndBinNetElecInvest() == 2)): # No line candidates
+        # Periods and scenarios are independent from each other
+        ScIndep = True
+        mTEPES.IndependentPeriods = True
+        for p in mTEPES.pp:
+            if (    (min([mTEPES.pEmission[p, ar] for ar in mTEPES.ar]) == math.inf or sum(mTEPES.pEmissionRate[nr] for nr in mTEPES.nr) == 0)  # No emissions
+                and (max([mTEPES.pRESEnergy[p, ar] for ar in mTEPES.ar]) == 0)):  # No minimum RES requirements
+            # Stages are independent from each other
+                StIndep = True
+                mTEPES.IndependentStages[p] = True
+    if all(mTEPES.IndependentStages[p]() for p in mTEPES.pp):
+        mTEPES.IndependentStages2 = True
+    print("rererererererrer")
+    for _ in mTEPES.s2n:
+        print(_)
+    print("qwqwqwqwqwqwqwqwqw")
+
+
+    mTEPES.Period = Block(mTEPES.pp)
+    for p in mTEPES.Period:
+        Period = mTEPES.Period[p]
+        Period.Scenario = Block(mTEPES.sc)
+        Period.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if pp == p])
+        for sc in Period.Scenario:
+            print("wawawawawawa")
+            Scenario = Period.Scenario[sc]
+            Scenario.Stage = Block(Set(initialize=[stt for pp,scc,stt, nn in mTEPES.s2n if scc == sc and pp == p]))
+            Scenario.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if scc == sc and pp == p])
+
+        # iterative model formulation for each stage of a year
+            print("lululululu")
+            for st in Scenario.Stage:
+                Stage = Scenario.Stage[st]
+                print(f"P:{p},Sc:{sc},St:{st}")
+                Stage.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
+                Stage.n2 = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
+
+                # load levels multiple of cycles for each ESS/generator
+                Stage.nesc = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.n.ord(n) % mTEPES.pStorageTimeStep[es] == 0]
+                Stage.necc = [(n, ec) for n, ec in Stage.n * mTEPES.ec if Stage.n.ord(n) % mTEPES.pStorageTimeStep[ec] == 0]
+                Stage.neso = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.n.ord(n) % mTEPES.pOutflowsTimeStep[es] == 0]
+                Stage.ngen = [(n, g) for n, g in Stage.n * mTEPES.g if Stage.n.ord(n) % mTEPES.pEnergyTimeStep[g] == 0]
+
+                if mTEPES.pIndHydroTopology == 1:
+                    Stage.nhc      = [(n,h ) for n,h  in Stage.n*mTEPES.h  if Stage.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
+                    if sum(1 for h,rs in mTEPES.p2r):
+                        Stage.np2c = [(n,h ) for n,h  in Stage.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) and Stage.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) == 0]
+                    else:
+                        Stage.np2c = []
+                    if sum(1 for rs,h in mTEPES.r2p):
+                        Stage.npc  = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) == 0]
+                    else:
+                        Stage.npc  = []
+                    Stage.nrsc     = [(n,rs) for n,rs in Stage.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
+                    Stage.nrcc     = [(n,rs) for n,rs in Stage.n*mTEPES.rn if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
+                    Stage.nrso     = [(n,rs) for n,rs in Stage.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pWaterOutTimeStep [rs] == 0]
+
+    for p in mTEPES.Period:
+        for sc in mTEPES.Period[p].Scenario:
+            for st in mTEPES.Period[p].Scenario[sc].Stage:
+                for n in mTEPES.Period[p].Scenario[sc].Stage[st].n:
+                    print(f"Periodo:{p}, Scenario:{sc}, Stage:{st}Hora:{n}")
+
+
 
     SettingUpVariablesTime = time.time() - StartTime
     print('Setting up variables                   ... ', round(SettingUpVariablesTime), 's')

@@ -128,10 +128,15 @@ def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConso
             OptModel.vHeatPipeInvest[p,ni,nf,cc].fix(OptModel.vHeatPipeInvest  [p,ni,nf,cc]())
 
     if idx > 0:
+        print("FGFGFGFGFGFGFG")
         OptModel.dual = Suffix(direction=Suffix.IMPORT_EXPORT)
         OptModel.rc   = Suffix(direction=Suffix.IMPORT_EXPORT)
         SolverResults = Solver.solve(OptModel, tee=True, report_timing=True)
 
+    import threading
+
+    # Thread-safe lock for updating mTEPES.pDuals
+    pDuals_lock = threading.Lock()
     # saving the dual variables for writing in output results
     pDuals = {}
     for con in OptModel.component_objects(pyo.Constraint, active=True):
@@ -139,7 +144,8 @@ def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConso
             for index in con:
                 pDuals[str(con.name)+str(index)] = OptModel.dual[con[index]]
 
-    mTEPES.pDuals.update(pDuals)
+    with pDuals_lock:
+        mTEPES.pDuals.update(pDuals)
 
     # save values of each stage
     for n in mTEPES.n:
@@ -159,6 +165,7 @@ def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConso
     print    ('  Solution time                        ... ', round(SolvingTime), 's')
     print    ('  Total system                 cost [MEUR] ', OptModel.vTotalSCost())
     if mTEPES.NoRepetition == 1:
+        print("No repetition")
         for pp,scc in mTEPES.ps:
             print    (f'***** Period: {pp}, Scenario: {scc}, Stage: {st} ******')
             print    ('  Total generation  investment cost [MEUR] ', sum(mTEPES.pDiscountedWeight[pp] * mTEPES.pGenInvestCost    [gc      ]   * OptModel.vGenerationInvest[pp,gc      ]() for gc       in mTEPES.gc if (pp,gc)       in mTEPES.pgc))
@@ -181,6 +188,7 @@ def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConso
             print    ('  Total emission               cost [MEUR] ', sum(mTEPES.pDiscountedWeight[pp] * mTEPES.pScenProb         [pp,scc  ]() * OptModel.vTotalECost      [pp,scc,n    ]() for n        in mTEPES.n ))
             print    ('  Total reliability            cost [MEUR] ', sum(mTEPES.pDiscountedWeight[pp] * mTEPES.pScenProb         [pp,scc  ]() * OptModel.vTotalRCost      [pp,scc,n    ]() for n        in mTEPES.n ))
     else:
+        print("Repetition")
         print        (f'***** Period: {p}, Scenario: {sc}, Stage: {st} ******')
         print        ('  Total generation  investment cost [MEUR] ', sum(mTEPES.pDiscountedWeight[p]  * mTEPES.pGenInvestCost    [gc      ]   * OptModel.vGenerationInvest[p,gc        ]() for gc       in mTEPES.gc if (p,gc)       in mTEPES.pgc))
         print        ('  Total generation  retirement cost [MEUR] ', sum(mTEPES.pDiscountedWeight[p]  * mTEPES.pGenRetireCost    [gd      ]   * OptModel.vGenerationRetire[p,gd        ]() for gd       in mTEPES.gd if (p,gd)       in mTEPES.pgd))
