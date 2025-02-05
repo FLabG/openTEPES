@@ -69,7 +69,7 @@ def GenerateAndSolveModel(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, C
             for st in Scenario.Stage:
                 Stage = Scenario.Stage[st]
                 GenerateModel(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
-    if pIndLogConsole == 1:
+    if True:
         StartTime = time.time()
         mTEPES.write(f'{_path}/openTEPES_{CaseName}.lp', io_options={'symbolic_solver_labels': True})
         WritingLPFileTime = time.time() - StartTime
