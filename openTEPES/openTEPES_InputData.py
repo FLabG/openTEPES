@@ -630,8 +630,31 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     #Reorder the elements
     pStageToLevel = [(p,sc,st,n) for (p,sc,st),n in pStageToLevel.items()]
     mTEPES.s2n = Set(initialize=pStageToLevel, doc='Load level to stage')
+
+    stage_mapping = {(p, sc, n): st for p, sc, st, n in mTEPES.s2n}
+
+    # Compute pStageDuration without modifying pDuration
+    pStageDuration = (
+        pDuration
+        .to_frame()  # Ensure it's a DataFrame
+        .rename_axis(['Period', 'Scenario', 'LoadLevel'])  # Ensure index names are set
+        .reset_index()  # Convert MultiIndex to columns for mapping
+        .assign(Stage=lambda df: df.apply(lambda row: stage_mapping.get((row['Period'], row['Scenario'], row['LoadLevel'])), axis=1))
+        .dropna(subset=['Stage'])  # Drop cases where no Stage was found (if necessary)
+        .groupby(['Period', 'Scenario', 'Stage'])['Duration']
+        .sum()
+        .to_frame()
+    )
+    print("444444444444444")
+    print(pStageDuration)
+
     # all the stages must have the same duration
-    pStageDuration = pd.Series([sum(pDuration[p,sc,n] for p,sc,st2,n in mTEPES.s2n if st2 == st) for st in mTEPES.st], index=mTEPES.st)
+    # pStageDuration = pd.DataFrame()
+    # pStageDuration = pd.Series([sum(pDuration[p,sc,n] for p,sc,st2,n in mTEPES.s2n if st2 == st) for st in mTEPES.st], index=mTEPES.st)
+    print("lylylylylyl")
+    print(pStageDuration)
+    print("3333333333")
+    print(pDuration)
     # for st in mTEPES.st:
     #     if mTEPES.st.ord(st) > 1 and pStageDuration[st] != pStageDuration[mTEPES.st.prev(st)]:
     #         assert (0 == 1)
@@ -676,7 +699,6 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         mTEPES.plc       = Set(initialize = [(p,     ni,nf,cc) for p,     ni,nf,cc in mTEPES.p  *mTEPES.lc  if (p,ni,nf,cc) in mTEPES.pla])
         mTEPES.pll       = Set(initialize = [(p,     ni,nf,cc) for p,     ni,nf,cc in mTEPES.p  *mTEPES.ll  if (p,ni,nf,cc) in mTEPES.pla])
 
-        mTEPES.psc       = Set(initialize = [(p,sc     )       for p,sc            in mTEPES.p  *mTEPES.sc])
         mTEPES.psg       = Set(initialize = [(p,sc,  g )       for p,sc,  g        in mTEPES.ps *mTEPES.g   if (p,g )  in mTEPES.pg  ])
         mTEPES.psnr      = Set(initialize = [(p,sc,  nr)       for p,sc,  nr       in mTEPES.ps *mTEPES.nr  if (p,nr)  in mTEPES.pnr ])
         mTEPES.pses      = Set(initialize = [(p,sc,  es)       for p,sc,  es       in mTEPES.ps *mTEPES.es  if (p,es)  in mTEPES.pes ])
@@ -701,6 +723,9 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         mTEPES.psnle     = Set(initialize = [(p,sc,n,ni,nf,cc) for p,sc,n,ni,nf,cc in mTEPES.psn*mTEPES.le if (p,ni,nf,cc) in mTEPES.pla])
         mTEPES.psnll     = Set(initialize = [(p,sc,n,ni,nf,cc) for p,sc,n,ni,nf,cc in mTEPES.psn*mTEPES.ll if (p,ni,nf,cc) in mTEPES.pll])
         mTEPES.psnls     = Set(initialize = [(p,sc,n,ni,nf,cc) for p,sc,n,ni,nf,cc in mTEPES.psn*mTEPES.ls if (p,ni,nf,cc) in mTEPES.pla])
+
+        mTEPES.psst     = Set(initialize  = list({(p, sc, st)  for p,sc,st,n       in mTEPES.s2n})) #Initialized directly from list to avoid duplicates
+        mTEPES.psstes   = Set(initialize  = [(p,sc,st,es)      for p,sc,st,es      in mTEPES.psst*mTEPES.es if (p,es)      in mTEPES.pes])
 
         if pIndHydroTopology == 1:
             mTEPES.prs   = Set(initialize = [(p,     rs)       for p,     rs       in mTEPES.p  *mTEPES.rs if pRsrPeriodIni[rs] <= p and pRsrPeriodFin[rs] >= p])
@@ -918,9 +943,19 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     pStorageTimeStep  = pStorageType.map (idxCycle                                                                                  ).astype('int')
     pOutflowsTimeStep = pOutflowsType.map(idxOutflows).where(pEnergyOutflows.sum()                               > 0.0, other = 8736).astype('int')
     pEnergyTimeStep   = pEnergyType.map  (idxEnergy  ).where(pVariableMinEnergy.sum() + pVariableMaxEnergy.sum() > 0.0, other = 8736).astype('int')
+    print("5555555555555555555")
+    print(pStorageTimeStep)
+    print(pOutflowsTimeStep)
+    print(pEnergyTimeStep)
 
     pStorageTimeStep  = pd.concat([pStorageTimeStep, pOutflowsTimeStep, pEnergyTimeStep], axis=1).min(axis=1)
+    print("666666666666666666")
+    print(pStorageTimeStep)
+
     # cycle time step can't exceed the stage duration
+    print("llilililililili")
+    print(pStageDuration)
+
     pStorageTimeStep  = pStorageTimeStep.where(pStorageTimeStep <= pStageDuration.min(), pStageDuration.min())
 
     if pIndHydroTopology == 1:
@@ -1395,7 +1430,7 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     mTEPES.pIndOperReserve       = Param(mTEPES.gg,    initialize=pIndOperReserve.to_dict()           , within=Binary          ,    doc='Indicator of operating reserve'                      )
     mTEPES.pIndOutflowIncomp     = Param(mTEPES.gg,    initialize=pIndOutflowIncomp.to_dict()         , within=Binary          ,    doc='Indicator of outflow incompatibility with charging'  )
     mTEPES.pEfficiency           = Param(mTEPES.eh,    initialize=pEfficiency.to_dict()               , within=UnitInterval    ,    doc='Round-trip efficiency'                               )
-    mTEPES.pStorageTimeStep      = Param(mTEPES.es,    initialize=pStorageTimeStep.to_dict()          , within=PositiveIntegers,    doc='ESS Storage cycle'                                   )
+    mTEPES.pStorageTimeStep      = Param(mTEPES.psstes,initialize=pStorageTimeStep.to_dict()          , within=PositiveIntegers,    doc='ESS Storage cycle'                                   )
     mTEPES.pOutflowsTimeStep     = Param(mTEPES.es,    initialize=pOutflowsTimeStep.to_dict()         , within=PositiveIntegers,    doc='ESS Outflows cycle'                                  )
     mTEPES.pEnergyTimeStep       = Param(mTEPES.gg,    initialize=pEnergyTimeStep.to_dict()           , within=PositiveIntegers,    doc='Unit energy cycle'                                   )
     mTEPES.pIniInventory         = Param(mTEPES.psnes, initialize=pIniInventory.to_dict()             , within=NonNegativeReals,    doc='ESS Initial storage',                    mutable=True)
