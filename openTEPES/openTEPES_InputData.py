@@ -1554,23 +1554,23 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         mTEPES.pHeatPipeUpInvest     = Param(mTEPES.hc, initialize=pHeatPipeUpInvest.to_dict()    , within=NonNegativeReals, doc='Upper bound of the heat pipe investment decision', mutable=True)
 
     # load levels multiple of cycles for each ESS/generator
-    mTEPES.nesc         = [(n,es) for n,es in mTEPES.n*mTEPES.es if mTEPES.n.ord(n) %     mTEPES.pStorageTimeStep [es] == 0]
-    mTEPES.necc         = [(n,ec) for n,ec in mTEPES.n*mTEPES.ec if mTEPES.n.ord(n) %     mTEPES.pStorageTimeStep [ec] == 0]
-    mTEPES.neso         = [(n,es) for n,es in mTEPES.n*mTEPES.es if mTEPES.n.ord(n) %     mTEPES.pOutflowsTimeStep[es] == 0]
-    mTEPES.ngen         = [(n,g ) for n,g  in mTEPES.n*mTEPES.g  if mTEPES.n.ord(n) %     mTEPES.pEnergyTimeStep  [g ] == 0]
+    mTEPES.psnesc         = [(p,sc,n,es) for p,sc,n,es in mTEPES.psn*mTEPES.es if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % mTEPES.pStorageTimeStep[es] == 0]
+    mTEPES.psnecc         = [(p,sc,n,ec) for p,sc,n,ec in mTEPES.psn*mTEPES.ec if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % mTEPES.pStorageTimeStep [ec] == 0]
+    mTEPES.psneso         = [(p,sc,n,es) for p,sc,n,es in mTEPES.psn*mTEPES.es if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % mTEPES.pOutflowsTimeStep[es] == 0]
+    mTEPES.psngen         = [(p,sc,n,g ) for p,sc,n,g  in mTEPES.psn*mTEPES.g  if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % mTEPES.pEnergyTimeStep  [g ] == 0 ]
     if pIndHydroTopology == 1:
-        mTEPES.nhc      = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
+        mTEPES.nhc      = [(p,sc,n,h ) for p,sc,n,h  in mTEPES.psn*mTEPES.h  if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
         if sum(1 for h,rs in mTEPES.p2r):
-            mTEPES.np2c = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) == 0]
+            mTEPES.psnp2c = [(p,sc,n,h ) for p,sc,n,h  in mTEPES.psn*mTEPES.h  if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) == 0 and sum(1 for rs in mTEPES.rs if (h,rs) in mTEPES.p2r)]
         else:
             mTEPES.np2c = []
         if sum(1 for rs,h in mTEPES.r2p):
-            mTEPES.npc  = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) == 0]
+            mTEPES.psnpc    = [(p,sc,n,h ) for p,sc,n,h  in mTEPES.psn*mTEPES.h  if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) == 0 and sum(1 for rs in mTEPES.rs if (rs,h) in mTEPES.r2p)]
         else:
             mTEPES.npc  = []
-        mTEPES.nrsc     = [(n,rs) for n,rs in mTEPES.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
-        mTEPES.nrcc     = [(n,rs) for n,rs in mTEPES.n*mTEPES.rn if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
-        mTEPES.nrso     = [(n,rs) for n,rs in mTEPES.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pWaterOutTimeStep [rs] == 0]
+        mTEPES.psnrsc     = [(p,sc,n,rs) for p,sc,n,rs in mTEPES.psn*mTEPES.rs if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % mTEPES.pReservoirTimeStep[rs] == 0]
+        mTEPES.psnrcc     = [(p,sc,n,rs) for p,sc,n,rs in mTEPES.psn*mTEPES.rn if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % mTEPES.pReservoirTimeStep[rs] == 0]
+        mTEPES.psnrso     = [(p,sc,n,rs) for p,sc,n,rs in mTEPES.psn*mTEPES.rs if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) %     mTEPES.pWaterOutTimeStep [rs] == 0]
 
     # ESS with outflows
     mTEPES.eo     = [(p,sc,es) for p,sc,es in mTEPES.pses if sum(mTEPES.pEnergyOutflows[p,sc,n2,es]() for n2 in mTEPES.n2 if (p,sc,n2) in mTEPES.psn)]
