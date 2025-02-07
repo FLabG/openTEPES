@@ -631,7 +631,22 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     pStageToLevel = [(p,sc,st,n) for (p,sc,st),n in pStageToLevel.items()]
     mTEPES.s2n = Set(initialize=pStageToLevel, doc='Load level to stage')
     # all the stages must have the same duration
-    pStageDuration = pd.Series([sum(pDuration[p,sc,n] for p,sc,st2,n in mTEPES.s2n if st2 == st) for st in mTEPES.st], index=mTEPES.st)
+
+    stage_mapping = {(p, sc, n): st for p, sc, st, n in mTEPES.s2n}
+
+
+    pStageDuration = (
+        pDuration
+        .to_frame()
+        .rename_axis(['Period', 'Scenario', 'LoadLevel'])
+        .reset_index()  # Convert MultiIndex to columns for mapping
+        .assign(Stage=lambda df: df.apply(lambda row: stage_mapping.get((row['Period'], row['Scenario'], row['LoadLevel'])), axis=1))
+        .dropna(subset=['Stage'])
+        .groupby(['Period', 'Scenario', 'Stage'])['Duration']
+        .sum()
+        .to_frame()
+    )
+    # pStageDuration = pd.Series([sum(pDuration[p,sc,n] for p,sc,st2,n in mTEPES.s2n if st2 == st) for st in mTEPES.st], index=mTEPES.st)
     # for st in mTEPES.st:
     #     if mTEPES.st.ord(st) > 1 and pStageDuration[st] != pStageDuration[mTEPES.st.prev(st)]:
     #         assert (0 == 1)
@@ -918,13 +933,54 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     idxEnergy['Monthly'] = round( 672/pTimeStep)
     idxEnergy['Yearly' ] = round(8736/pTimeStep)
 
-    pStorageTimeStep  = pStorageType.map (idxCycle                                                                                  ).astype('int')
-    pOutflowsTimeStep = pOutflowsType.map(idxOutflows).where(pEnergyOutflows.sum()                               > 0.0, other = 8736).astype('int')
-    pEnergyTimeStep   = pEnergyType.map  (idxEnergy  ).where(pVariableMinEnergy.sum() + pVariableMaxEnergy.sum() > 0.0, other = 8736).astype('int')
 
-    pStorageTimeStep  = pd.concat([pStorageTimeStep, pOutflowsTimeStep, pEnergyTimeStep], axis=1).min(axis=1)
-    # cycle time step can't exceed the stage duration
-    pStorageTimeStep  = pStorageTimeStep.where(pStorageTimeStep <= pStageDuration.min(), pStageDuration.min())
+    #Turn Storage Type strings (Daily,Monthly,...) into Generator-TimeStep dataframes
+    pStorageTimeStep = pStorageType.map(idxCycle).astype('int').reset_index().rename(columns={'index': 'Generator', 'StorageType': 'TimeStep'}).set_index('Generator')
+    pOutflowsTimeStep = pOutflowsType.map(idxOutflows).astype('int').reset_index().rename(columns={'index': 'Generator', 'OutflowsType': 'TimeStep'}).set_index('Generator')
+    pEnergyTimeStep = pEnergyType.map(idxEnergy).astype('int').reset_index().rename(columns={'index': 'Generator', 'EnergyType': 'TimeStep'}).set_index('Generator')
+
+
+    # Ensure that the Time Step for each generator in each state has the maximum needed resolution and does not exceed stage duration
+
+    # pStageDuration is a multiindex of Period,Scenario,Stage --- Duration.
+    pStorageTimeStep = pStageDuration.reset_index().merge(pStorageTimeStep.reset_index(), how='cross')   #Add generator as an index
+    pStorageTimeStep['TimeStep'] = pStorageTimeStep[['Duration', 'TimeStep']].min(axis=1)                #Compute the minimum between stage duration and time step
+    pStorageTimeStep = pStorageTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])          #Form the multiindex again
+    pStorageTimeStep = pStorageTimeStep.drop(columns=['Duration'])                                       #Drop the Duration column which is no longer needed
+
+    pOutflowsTimeStep = pStageDuration.reset_index().merge(pOutflowsTimeStep.reset_index(), how='cross')
+    pOutflowsTimeStep['TimeStep'] = pOutflowsTimeStep[['Duration', 'TimeStep']].min(axis=1)
+    pOutflowsTimeStep = pOutflowsTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])
+    pOutflowsTimeStep = pOutflowsTimeStep.drop(columns=['Duration'])
+
+    pEnergyTimeStep = pStageDuration.reset_index().merge(pEnergyTimeStep.reset_index(), how='cross')
+    pEnergyTimeStep['TimeStep'] = pEnergyTimeStep[['Duration', 'TimeStep']].min(axis=1)
+    pEnergyTimeStep = pEnergyTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])
+    pEnergyTimeStep = pEnergyTimeStep.drop(columns=['Duration'])
+
+    pGeneratorTimeStep = pStorageTimeStep.copy()
+
+    # Compute the minimum TimeStep across the three DataFrames
+    pGeneratorTimeStep['TimeStep'] = (
+         pStorageTimeStep['TimeStep']
+        .combine(pOutflowsTimeStep['TimeStep'], func=min)
+        .combine(pEnergyTimeStep['TimeStep'], func=min)
+    )
+
+
+    # Print result
+    print("000000000000")
+    pd.set_option('display.max_rows', None)  # Show all rows
+    pd.set_option('display.max_columns', None)  # Show all columns
+    pd.set_option('display.expand_frame_repr', False)  # Prevent line wrapping
+
+    print(pStorageTimeStep)
+    print("0101010101010101")
+    print(pOutflowsTimeStep)
+    print("232323232323")
+    print(pEnergyTimeStep)
+    print("676767676767676767")
+    print(pGeneratorTimeStep)
 
     if pIndHydroTopology == 1:
         # %% definition of the time-steps leap to observe the stored energy at a reservoir
@@ -1398,9 +1454,6 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     mTEPES.pIndOperReserve       = Param(mTEPES.gg,    initialize=pIndOperReserve.to_dict()           , within=Binary          ,    doc='Indicator of operating reserve'                      )
     mTEPES.pIndOutflowIncomp     = Param(mTEPES.gg,    initialize=pIndOutflowIncomp.to_dict()         , within=Binary          ,    doc='Indicator of outflow incompatibility with charging'  )
     mTEPES.pEfficiency           = Param(mTEPES.eh,    initialize=pEfficiency.to_dict()               , within=UnitInterval    ,    doc='Round-trip efficiency'                               )
-    mTEPES.pStorageTimeStep      = Param(mTEPES.es,    initialize=pStorageTimeStep.to_dict()          , within=PositiveIntegers,    doc='ESS Storage cycle'                                   )
-    mTEPES.pOutflowsTimeStep     = Param(mTEPES.es,    initialize=pOutflowsTimeStep.to_dict()         , within=PositiveIntegers,    doc='ESS Outflows cycle'                                  )
-    mTEPES.pEnergyTimeStep       = Param(mTEPES.gg,    initialize=pEnergyTimeStep.to_dict()           , within=PositiveIntegers,    doc='Unit energy cycle'                                   )
     mTEPES.pIniInventory         = Param(mTEPES.psnes, initialize=pIniInventory.to_dict()             , within=NonNegativeReals,    doc='ESS Initial storage',                    mutable=True)
     mTEPES.pStorageType          = Param(mTEPES.es,    initialize=pStorageType.to_dict()              , within=Any             ,    doc='ESS Storage type'                                    )
     mTEPES.pGenLoInvest          = Param(mTEPES.eb,    initialize=pGenLoInvest.to_dict()              , within=NonNegativeReals,    doc='Lower bound of the investment decision', mutable=True)
@@ -1520,9 +1573,10 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         mTEPES.pIndBinHeatPipeInvest = Param(mTEPES.hn, initialize=pIndBinHeatPipeInvest.to_dict(), within=Binary          , doc='Binary  heat pipe investment decision'                         )
         mTEPES.pHeatPipeLoInvest     = Param(mTEPES.hc, initialize=pHeatPipeLoInvest.to_dict()    , within=NonNegativeReals, doc='Lower bound of the heat pipe investment decision', mutable=True)
         mTEPES.pHeatPipeUpInvest     = Param(mTEPES.hc, initialize=pHeatPipeUpInvest.to_dict()    , within=NonNegativeReals, doc='Upper bound of the heat pipe investment decision', mutable=True)
-
-
-
+    print("1111111111111111111111111")
+    print(pStorageTimeStep)
+    print(pOutflowsTimeStep)
+    print(pEnergyTimeStep)
     mTEPES.Period = Block(mTEPES.pp)
     for p in mTEPES.Period:
         Period = mTEPES.Period[p]
@@ -1537,12 +1591,15 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
                 Stage = Scenario.Stage[st]
                 Stage.n  = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
                 Stage.n2 = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
+                Stage.pStorageTimeStep  = Param(mTEPES.es, initialize=pStorageTimeStep.to_dict() , within=NonNegativeIntegers, doc='ESS Storage cycle')
+                Stage.pOutflowsTimeStep = Param(mTEPES.es, initialize=pOutflowsTimeStep.to_dict(), within=NonNegativeIntegers, doc='ESS Outflows cycle')
+                Stage.pEnergyTimeStep   = Param(mTEPES.gg, initialize=pEnergyTimeStep.to_dict()  , within=NonNegativeIntegers, doc='Unit energy cycle')
 
                 # load levels multiple of cycles for each ESS/generator
-                Stage.nesc = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.n.ord(n) % mTEPES.pStorageTimeStep[es] == 0]
-                Stage.necc = [(n, ec) for n, ec in Stage.n * mTEPES.ec if Stage.n.ord(n) % mTEPES.pStorageTimeStep[ec] == 0]
-                Stage.neso = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.n.ord(n) % mTEPES.pOutflowsTimeStep[es] == 0]
-                Stage.ngen = [(n, g) for n, g in Stage.n * mTEPES.g if Stage.n.ord(n) % mTEPES.pEnergyTimeStep[g] == 0]
+                Stage.nesc = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.pStorageTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pStorageTimeStep [es] == 0]
+                Stage.necc = [(n, ec) for n, ec in Stage.n * mTEPES.ec if Stage.pStorageTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pStorageTimeStep [ec] == 0]
+                Stage.neso = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.pStorageTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pOutflowsTimeStep[es] == 0]
+                Stage.ngen = [(n, g ) for n, g  in Stage.n * mTEPES.g  if Stage.pStorageTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pEnergyTimeStep  [g ] == 0]
 
                 if mTEPES.pIndHydroTopology == 1:
                     Stage.nhc      = [(n,h ) for n,h  in Stage.n*mTEPES.h  if Stage.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
