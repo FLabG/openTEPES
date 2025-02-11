@@ -725,7 +725,9 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         mTEPES.psnll     = Set(initialize = [(p,sc,n,ni,nf,cc) for p,sc,n,ni,nf,cc in mTEPES.psn*mTEPES.ll if (p,ni,nf,cc) in mTEPES.pll])
         mTEPES.psnls     = Set(initialize = [(p,sc,n,ni,nf,cc) for p,sc,n,ni,nf,cc in mTEPES.psn*mTEPES.ls if (p,ni,nf,cc) in mTEPES.pla])
 
-        mTEPES.psst      = Set(initialize=[(p, sc, st) for p, sc, st in mTEPES.psc * mTEPES.stt for p2, sc2, st2, n in mTEPES.s2n if (p, sc, st) == (p2, sc2, st2)])
+        # Initialized from a list created by intersection of sets to avoid duplicates
+        mTEPES.psst = Set(initialize=list({(p, sc, st) for p, sc, st, n in mTEPES.s2n} & {(p, sc, st) for p, sc, st in mTEPES.psc * mTEPES.stt}))
+
         mTEPES.psstes    = Set(initialize=[(p,sc,st,es)        for p,sc,st, es     in mTEPES.psst*mTEPES.es if (p,es)  in mTEPES.pes ])
         mTEPES.psstg     = Set(initialize=[(p,sc,st,g )        for p,sc,st, g      in mTEPES.psst*mTEPES.gg if (p,g )  in mTEPES.pg  ])
 
