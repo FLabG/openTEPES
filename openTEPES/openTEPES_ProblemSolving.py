@@ -205,6 +205,12 @@ def ProblemSolving(DirName, CaseName, SolverName, OptModel, mTEPES, pIndLogConso
             print    ('  Total heat pipe   investment cost [MEUR] ', sum(mTEPES.pDiscountedWeight[p]  * mTEPES.pHeatPipeFixedCost[ni,nf,cc]   * OptModel.vHeatPipeInvest  [p,ni,nf,cc  ]() for ni,nf,cc in mTEPES.hc if (p,ni,nf,cc) in mTEPES.phc))
         else:
             print    ('  Total heat pipe   investment cost [MEUR] ', 0.0)
+        print("'''''''''''''''''")
+        print(mTEPES.pScenProb.keys())
+        for p,sc in mTEPES.psc:
+            print(mTEPES.pScenProb[(p,sc)])
+        for p,sc,n in mTEPES.psn:
+            print(OptModel.vTotalGCost[(p,sc,n)])
         print        ('  Total generation  operation  cost [MEUR] ', sum(mTEPES.pDiscountedWeight[p]  * mTEPES.pScenProb         [p,sc    ]() * OptModel.vTotalGCost      [p,sc,n      ]() for n        in mTEPES.n ))
         print        ('  Total consumption operation  cost [MEUR] ', sum(mTEPES.pDiscountedWeight[p]  * mTEPES.pScenProb         [p,sc    ]() * OptModel.vTotalCCost      [p,sc,n      ]() for n        in mTEPES.n ))
         print        ('  Total emission               cost [MEUR] ', sum(mTEPES.pDiscountedWeight[p]  * mTEPES.pScenProb         [p,sc    ]() * OptModel.vTotalECost      [p,sc,n      ]() for n        in mTEPES.n ))

@@ -960,27 +960,8 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     pEnergyTimeStep['TimeStep'] = pEnergyTimeStep[['Duration', 'TimeStep']].min(axis=1)
     pEnergyTimeStep = pEnergyTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])['TimeStep'].unstack()
 
-    print("5555555555555555555")
-    print(pStorageTimeStep)
-    print(pOutflowsTimeStep)
-    print(pEnergyTimeStep)
-
     # Compute the minimum TimeStep across the three DataFrames
     pStorageTimeStep = pd.concat([pStorageTimeStep, pOutflowsTimeStep, pEnergyTimeStep]).groupby(level=[0, 1, 2]).min()
-
-    # Print result
-    print("000000000000")
-    pd.set_option('display.max_rows', None)  # Show all rows
-    pd.set_option('display.max_columns', None)  # Show all columns
-    pd.set_option('display.expand_frame_repr', False)  # Prevent line wrapping
-
-    print(pStorageTimeStep)
-    print("0101010101010101")
-    print(pOutflowsTimeStep)
-    print("232323232323")
-    print(pEnergyTimeStep)
-    print("676767676767676767")
-
 
     if pIndHydroTopology == 1:
         # %% definition of the time-steps leap to observe the stored energy at a reservoir
@@ -1009,6 +990,93 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         # cycle water step can't exceed the stage duration
         pReservoirTimeStep = pReservoirTimeStep.where(pReservoirTimeStep <= pStageDuration.min(), pStageDuration.min())
 
+    # initial inventory must be between minimum and maximum
+    pInitialInventory = pInitialInventory.where(pInitialInventory > pRatedMinStorage, pRatedMinStorage)
+    pInitialInventory = pInitialInventory.where(pInitialInventory < pRatedMaxStorage, pRatedMaxStorage)
+    if pIndHydroTopology == 1:
+        pInitialVolume = pInitialVolume.where(pInitialVolume > pRatedMinVolume, pRatedMinVolume)
+        pInitialVolume = pInitialVolume.where(pInitialVolume < pRatedMaxVolume, pRatedMaxVolume)
+
+    # initial inventory of the candidate storage units equal to its maximum capacity if the storage capacity is linked to the investment decision
+    pInitialInventory.update(pd.Series([pInitialInventory[ec] if pIndBinStorInvest[ec] == 0 else pRatedMaxStorage[ec] for ec in mTEPES.ec], index=mTEPES.ec, dtype='float64'))
+
+    # parameter that allows the initial inventory to change with load level
+    pIniInventory = pd.DataFrame([pInitialInventory] * len(mTEPES.psn), index=pd.MultiIndex.from_tuples(mTEPES.psn), columns=mTEPES.es)
+    if pIndHydroTopology == 1:
+        pIniVolume = pd.DataFrame([pInitialVolume] * len(mTEPES.psn), index=pd.MultiIndex.from_tuples(mTEPES.psn), columns=mTEPES.rs)
+
+
+
+    # drop generators not es
+    pEfficiency          = pEfficiency.loc          [mTEPES.eh   ]
+    pStorageTimeStep     = pStorageTimeStep         [mTEPES.es   ] # no .loc since es is a column not an index of the dataframe
+    pOutflowsTimeStep    = pOutflowsTimeStep        [mTEPES.es   ] # no .loc since es is a column not an index of the dataframe
+    pStorageType         = pStorageType.loc         [mTEPES.es   ]
+
+    mTEPES.Period = Block(mTEPES.pp)
+    for p in mTEPES.Period:
+        Period = mTEPES.Period[p]
+        Period.Scenario = Block(mTEPES.sc)
+        Period.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if pp == p])
+        for sc in Period.Scenario:
+            Scenario = Period.Scenario[sc]
+            Scenario.Stage = Block(Set(initialize=[stt for pp,scc,stt, nn in mTEPES.s2n if scc == sc and pp == p]))
+            Scenario.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if scc == sc and pp == p])
+
+            for st in Scenario.Stage:
+                Stage = Scenario.Stage[st]
+                Stage.n  = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
+                Stage.n2 = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
+                Stage.pStorageTimeStep  = Param(mTEPES.es, initialize=pStorageTimeStep.loc[p,sc,st] , within=NonNegativeIntegers, doc='ESS Storage cycle')
+                Stage.pOutflowsTimeStep = Param(mTEPES.es, initialize=pOutflowsTimeStep.loc[p,sc,st], within=NonNegativeIntegers, doc='ESS Outflows cycle')
+                Stage.pEnergyTimeStep   = Param(mTEPES.gg, initialize=pEnergyTimeStep.loc[p,sc,st]  , within=NonNegativeIntegers, doc='Unit energy cycle')
+
+                # load levels multiple of cycles for each ESS/generator
+                Stage.nesc = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.pStorageTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pStorageTimeStep [es] == 0]
+                Stage.necc = [(n, ec) for n, ec in Stage.n * mTEPES.ec if Stage.pStorageTimeStep[ec] != 0 and Stage.n.ord(n) % Stage.pStorageTimeStep [ec] == 0]
+                Stage.neso = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.pOutflowsTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pOutflowsTimeStep[es] == 0]
+                Stage.ngen = [(n, g ) for n, g  in Stage.n * mTEPES.g  if Stage.pEnergyTimeStep[g ] != 0 and Stage.n.ord(n) % Stage.pEnergyTimeStep  [g ] == 0]
+
+                if pIndHydroTopology == 1:
+                    Stage.nhc      = [(n,h ) for n,h  in Stage.n*mTEPES.h  if Stage.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
+                    if sum(1 for h,rs in mTEPES.p2r):
+                        Stage.np2c = [(n,h ) for n,h  in Stage.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) and Stage.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) == 0]
+                    else:
+                        Stage.np2c = []
+                    if sum(1 for rs,h in mTEPES.r2p):
+                        Stage.npc  = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) == 0]
+                    else:
+                        Stage.npc  = []
+                    Stage.nrsc     = [(n,rs) for n,rs in Stage.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
+                    Stage.nrcc     = [(n,rs) for n,rs in Stage.n*mTEPES.rn if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
+                    Stage.nrso     = [(n,rs) for n,rs in Stage.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pWaterOutTimeStep [rs] == 0]
+
+    for p in mTEPES.Period:
+        Period = mTEPES.Period[p]
+        for sc in Period.Scenario:
+            Scenario = Period.Scenario[sc]
+            for st in Scenario.Stage:
+                Stage = Scenario.Stage[st]
+                for n in Stage.n:
+                    for es in mTEPES.es:
+                        if Stage.n.ord(n) == Stage.pStorageTimeStep[es]:
+                            if  pIniInventory[es][p,sc,n] < pMinStorage[es][p,sc,n]:
+                                pIniInventory[es][p,sc,n] = pMinStorage[es][p,sc,n]
+                                print('### Initial inventory lower than minimum storage ',   es)
+                            if  pIniInventory[es][p,sc,n] > pMaxStorage[es][p,sc,n]:
+                                pIniInventory[es][p,sc,n] = pMaxStorage[es][p,sc,n]
+                                print('### Initial inventory greater than maximum storage ', es)
+                    if pIndHydroTopology == 1:
+                        for rs in mTEPES.rs:
+                            if Stage.n.ord(n) == pReservoirTimeStep[rs]:
+                                if  pIniVolume[rs][p,sc,n] < pMinVolume[rs][p,sc,n]:
+                                    pIniVolume[rs][p,sc,n] = pMinVolume[rs][p,sc,n]
+                                    print('### Initial volume lower than minimum volume ',   rs)
+                                if  pIniVolume[rs][p,sc,n] > pMaxVolume[rs][p,sc,n]:
+                                    pIniVolume[rs][p,sc,n] = pMaxVolume[rs][p,sc,n]
+                                    print('### Initial volume greater than maximum volume ', rs)
+
+
 
 
     # drop load levels with duration 0
@@ -1035,11 +1103,7 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     pRatedLinearOperCost = pRatedLinearFuelCost.loc [mTEPES.g    ]
     pRatedLinearVarCost  = pRatedLinearFuelCost.loc [mTEPES.g    ]
 
-    # drop generators not es
-    pEfficiency          = pEfficiency.loc          [mTEPES.eh   ]
-    pStorageTimeStep     = pStorageTimeStep.loc     [mTEPES.es   ]
-    pOutflowsTimeStep    = pOutflowsTimeStep.loc    [mTEPES.es   ]
-    pStorageType         = pStorageType.loc         [mTEPES.es   ]
+
 
     if pIndHydroTopology == 1:
         pHydroInflows    = pHydroInflows.loc        [mTEPES.psn  ]
@@ -1541,47 +1605,8 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         mTEPES.pIndBinHeatPipeInvest = Param(mTEPES.hn, initialize=pIndBinHeatPipeInvest.to_dict(), within=Binary          , doc='Binary  heat pipe investment decision'                         )
         mTEPES.pHeatPipeLoInvest     = Param(mTEPES.hc, initialize=pHeatPipeLoInvest.to_dict()    , within=NonNegativeReals, doc='Lower bound of the heat pipe investment decision', mutable=True)
         mTEPES.pHeatPipeUpInvest     = Param(mTEPES.hc, initialize=pHeatPipeUpInvest.to_dict()    , within=NonNegativeReals, doc='Upper bound of the heat pipe investment decision', mutable=True)
-    print("1111111111111111111111111")
-    print(pStorageTimeStep)
-    print(pOutflowsTimeStep)
-    print(pEnergyTimeStep)
-    mTEPES.Period = Block(mTEPES.pp)
-    for p in mTEPES.Period:
-        Period = mTEPES.Period[p]
-        Period.Scenario = Block(mTEPES.sc)
-        Period.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if pp == p])
-        for sc in Period.Scenario:
-            Scenario = Period.Scenario[sc]
-            Scenario.Stage = Block(Set(initialize=[stt for pp,scc,stt, nn in mTEPES.s2n if scc == sc and pp == p]))
-            Scenario.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if scc == sc and pp == p])
 
-            for st in Scenario.Stage:
-                Stage = Scenario.Stage[st]
-                Stage.n  = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
-                Stage.n2 = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
-                Stage.pStorageTimeStep  = Param(mTEPES.es, initialize=pStorageTimeStep.to_dict() , within=NonNegativeIntegers, doc='ESS Storage cycle')
-                Stage.pOutflowsTimeStep = Param(mTEPES.es, initialize=pOutflowsTimeStep.to_dict(), within=NonNegativeIntegers, doc='ESS Outflows cycle')
-                Stage.pEnergyTimeStep   = Param(mTEPES.gg, initialize=pEnergyTimeStep.to_dict()  , within=NonNegativeIntegers, doc='Unit energy cycle')
 
-                # load levels multiple of cycles for each ESS/generator
-                Stage.nesc = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.pStorageTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pStorageTimeStep [es] == 0]
-                Stage.necc = [(n, ec) for n, ec in Stage.n * mTEPES.ec if Stage.pStorageTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pStorageTimeStep [ec] == 0]
-                Stage.neso = [(n, es) for n, es in Stage.n * mTEPES.es if Stage.pStorageTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pOutflowsTimeStep[es] == 0]
-                Stage.ngen = [(n, g ) for n, g  in Stage.n * mTEPES.g  if Stage.pStorageTimeStep[es] != 0 and Stage.n.ord(n) % Stage.pEnergyTimeStep  [g ] == 0]
-
-                if mTEPES.pIndHydroTopology == 1:
-                    Stage.nhc      = [(n,h ) for n,h  in Stage.n*mTEPES.h  if Stage.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2h) == 0]
-                    if sum(1 for h,rs in mTEPES.p2r):
-                        Stage.np2c = [(n,h ) for n,h  in Stage.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) and Stage.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) == 0]
-                    else:
-                        Stage.np2c = []
-                    if sum(1 for rs,h in mTEPES.r2p):
-                        Stage.npc  = [(n,h ) for n,h  in mTEPES.n*mTEPES.h  if sum(1 for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) == 0]
-                    else:
-                        Stage.npc  = []
-                    Stage.nrsc     = [(n,rs) for n,rs in Stage.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
-                    Stage.nrcc     = [(n,rs) for n,rs in Stage.n*mTEPES.rn if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
-                    Stage.nrso     = [(n,rs) for n,rs in Stage.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pWaterOutTimeStep [rs] == 0]
 
 
     # ESS with outflows
@@ -1593,37 +1618,21 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     mTEPES.gm     = [(p,sc,g ) for p,sc,g  in mTEPES.psg  if sum(mTEPES.pMinEnergy     [p,sc,n2,g ]   for n2 in mTEPES.n2 if (p,sc,n2) in mTEPES.psn)]
     mTEPES.gM     = [(p,sc,g ) for p,sc,g  in mTEPES.psg  if sum(mTEPES.pMaxEnergy     [p,sc,n2,g ]   for n2 in mTEPES.n2 if (p,sc,n2) in mTEPES.psn)]
 
-
-    # initial inventory must be between minimum and maximum
-    pInitialInventory  = pInitialInventory.where(pInitialInventory > pRatedMinStorage, pRatedMinStorage)
-    pInitialInventory  = pInitialInventory.where(pInitialInventory < pRatedMaxStorage, pRatedMaxStorage)
-    if pIndHydroTopology == 1:
-        pInitialVolume = pInitialVolume.where   (pInitialVolume    > pRatedMinVolume,  pRatedMinVolume )
-        pInitialVolume = pInitialVolume.where   (pInitialVolume    < pRatedMaxVolume,  pRatedMaxVolume )
-
-    # initial inventory of the candidate storage units equal to its maximum capacity if the storage capacity is linked to the investment decision
-    pInitialInventory.update(pd.Series([pInitialInventory[ec] if pIndBinStorInvest[ec] == 0 else pRatedMaxStorage[ec] for ec in mTEPES.ec], index=mTEPES.ec, dtype='float64'))
-
-    # parameter that allows the initial inventory to change with load level
-    pIniInventory  = pd.DataFrame([pInitialInventory]*len(mTEPES.psn), index=pd.MultiIndex.from_tuples(mTEPES.psn), columns=mTEPES.es)
-    if pIndHydroTopology == 1:
-        pIniVolume = pd.DataFrame([pInitialVolume   ]*len(mTEPES.psn), index=pd.MultiIndex.from_tuples(mTEPES.psn), columns=mTEPES.rs)
-
     # initial inventory must be between minimum and maximum
     # for p,sc,n,es in mTEPES.psnes:
     for p in mTEPES.Period:
         Period = mTEPES.Period[p]
         for sc in Period.Scenario:
-            Scenario = Period.Scenarip[sc]
+            Scenario = Period.Scenario[sc]
             for st in Scenario.Stage:
                 Stage = Scenario.Stage[st]
                 for n in Stage.n:
                     if Stage.n.ord(n) == Stage.pStorageTimeStep[es]:
-                        if  pIniInventory[es][p,sc,n] < pMinStorage[es][p,sc,n]:
-                            pIniInventory[es][p,sc,n] = pMinStorage[es][p,sc,n]
+                        if  pIniInventory[p,sc,n,es] < pMinStorage[p,sc,n,es]:
+                            pIniInventory[p,sc,n,es] = pMinStorage[p,sc,n,es]
                             print('### Initial inventory lower than minimum storage ',   es)
-                        if  pIniInventory[es][p,sc,n] > pMaxStorage[es][p,sc,n]:
-                            pIniInventory[es][p,sc,n] = pMaxStorage[es][p,sc,n]
+                        if  pIniInventory[p,sc,n,es] > pMaxStorage[p,sc,n,es]:
+                            pIniInventory[p,sc,n,es] = pMaxStorage[p,sc,n,es]
                             print('### Initial inventory greater than maximum storage ', es)
                     if pIndHydroTopology == 1:
                         if Stage.n.ord(n) == pReservoirTimeStep[rs]:
@@ -2534,7 +2543,7 @@ def SettingUpVariables(OptModel, mTEPES):
                 if sum(mTEPES.pRatedMaxPowerHeat[g] * mTEPES.pAvailability[g]() / (1.0-mTEPES.pEFOR[g]) for g in mTEPES.g if (p,g) in mTEPES.pg and (ar,g) in mTEPES.a2g) < mTEPES.pDemandHeatPeak[p,ar] * mTEPES.pReserveMarginHeat[p,ar]:
                     raise ValueError('### Heat reserve margin infeasibility ',        p, ar, sum(mTEPES.pRatedMaxPowerHeat[g] * mTEPES.pAvailability[g]() / (1.0-mTEPES.pEFOR[g]) for g in mTEPES.g if (p,g) in mTEPES.pg and (ar,g) in mTEPES.a2g), mTEPES.pDemandHeatPeak[p,ar] * mTEPES.pReserveMargin[p,ar])
 
-    DetectInfeasibilities(mTEPES)
+    # DetectInfeasibilities(mTEPES)
 
     mTEPES.nFixedVariables = Param(initialize=round(nFixedVariables), within=NonNegativeIntegers, doc='Number of fixed variables')
 

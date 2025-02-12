@@ -95,6 +95,7 @@ def GenerateAndSolveScenario(mTEPES, pIndLogConsole, pIndCycleFlow, _path, DirNa
             print(f'Writing LP file for {p} {sc}                        ... {round(WritingLPFileTime)} s')
 
         # Call ProblemSolving
+        print("problem solve sc",sc)
         ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
 
 
@@ -176,11 +177,11 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
     mTEPES.NoRepetition = 0
     StIndep = ScIndep = False
     # mTEPES.Parallel = False
-    if mTEPES.IndependentPeriods() == False or True: #There is investment and the problem needs to be solved as a whole
+    if mTEPES.IndependentPeriods() == False: #There is investment and the problem needs to be solved as a whole
         print("Not parallel")
         GenerateAndSolveModel(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName)
 
-    elif mTEPES.IndependentPeriods() == True and mTEPES.IndependentStages2() == False: #No investment but emissions or RES requirements linking stages together
+    elif mTEPES.IndependentPeriods() == True and mTEPES.IndependentStages2() == False or True: #No investment but emissions or RES requirements linking stages together
         print("parallel Scenarios")
         if mTEPES.Parallel():
             with ProcessPoolExecutor(max_workers=8) as executor:
