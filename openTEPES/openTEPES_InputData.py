@@ -717,8 +717,8 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         mTEPES.psnll     = Set(initialize = [(p,sc,n,ni,nf,cc) for p,sc,n,ni,nf,cc in mTEPES.psn*mTEPES.ll if (p,ni,nf,cc) in mTEPES.pll])
         mTEPES.psnls     = Set(initialize = [(p,sc,n,ni,nf,cc) for p,sc,n,ni,nf,cc in mTEPES.psn*mTEPES.ls if (p,ni,nf,cc) in mTEPES.pla])
 
-        mTEPES.psst = Set(initialize=list({(p, sc, st) for p, sc, st, n in mTEPES.s2n}))  # Initialized directly from list to avoid duplicates
-        mTEPES.psstes = Set(initialize=[(p, sc, st, es) for p, sc, st, es in mTEPES.psst * mTEPES.es if (p, es) in mTEPES.pes])
+        # mTEPES.psst = Set(initialize=list({(p, sc, st) for p, sc, st, n in mTEPES.s2n}))  # Initialized directly from list to avoid duplicates
+        # mTEPES.psstes = Set(initialize=[(p, sc, st, es) for p, sc, st, es in mTEPES.psst * mTEPES.es if (p, es) in mTEPES.pes])
 
         if pIndHydroTopology == 1:
             mTEPES.prs   = Set(initialize = [(p,     rs)       for p,     rs       in mTEPES.p  *mTEPES.rs if pRsrPeriodIni[rs] <= p and pRsrPeriodFin[rs] >= p])
@@ -942,31 +942,31 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
 
     # Ensure that the Time Step for each generator in each state has the maximum needed resolution and does not exceed stage duration
 
-    # pStageDuration is a multiindex of Period,Scenario,Stage --- Duration.
-    pStorageTimeStep = pStageDuration.reset_index().merge(pStorageTimeStep.reset_index(), how='cross')   #Add generator as an index
-    pStorageTimeStep['TimeStep'] = pStorageTimeStep[['Duration', 'TimeStep']].min(axis=1)                #Compute the minimum between stage duration and time step
-    pStorageTimeStep = pStorageTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])          #Form the multiindex again
-    pStorageTimeStep = pStorageTimeStep.drop(columns=['Duration'])                                       #Drop the Duration column which is no longer needed
+    # Turn Storage Type strings (Daily,Monthly,...) into Generator-TimeStep dataframes
+    pStorageTimeStep = pStorageType.map(idxCycle).astype('int').reset_index().rename(columns={'index': 'Generator', 'StorageType': 'TimeStep'}).set_index('Generator')
+    pOutflowsTimeStep = pOutflowsType.map(idxOutflows).astype('int').reset_index().rename(columns={'index': 'Generator', 'OutflowsType': 'TimeStep'}).set_index('Generator')
+    pEnergyTimeStep = pEnergyType.map(idxEnergy).astype('int').reset_index().rename(columns={'index': 'Generator', 'EnergyType': 'TimeStep'}).set_index('Generator')
+
+    # Ensure that the Time Step for each generator in each state has the maximum needed resolution and does not exceed stage duration
+    pStorageTimeStep = pStageDuration.reset_index().merge(pStorageTimeStep.reset_index(), how='cross')
+    pStorageTimeStep['TimeStep'] = pStorageTimeStep[['Duration', 'TimeStep']].min(axis=1)
+    pStorageTimeStep = pStorageTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])['TimeStep'].unstack()
 
     pOutflowsTimeStep = pStageDuration.reset_index().merge(pOutflowsTimeStep.reset_index(), how='cross')
     pOutflowsTimeStep['TimeStep'] = pOutflowsTimeStep[['Duration', 'TimeStep']].min(axis=1)
-    pOutflowsTimeStep = pOutflowsTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])
-    pOutflowsTimeStep = pOutflowsTimeStep.drop(columns=['Duration'])
+    pOutflowsTimeStep = pOutflowsTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])['TimeStep'].unstack()
 
     pEnergyTimeStep = pStageDuration.reset_index().merge(pEnergyTimeStep.reset_index(), how='cross')
     pEnergyTimeStep['TimeStep'] = pEnergyTimeStep[['Duration', 'TimeStep']].min(axis=1)
-    pEnergyTimeStep = pEnergyTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])
-    pEnergyTimeStep = pEnergyTimeStep.drop(columns=['Duration'])
+    pEnergyTimeStep = pEnergyTimeStep.set_index(['Period', 'Scenario', 'Stage', 'Generator'])['TimeStep'].unstack()
 
-    pGeneratorTimeStep = pStorageTimeStep.copy()
+    print("5555555555555555555")
+    print(pStorageTimeStep)
+    print(pOutflowsTimeStep)
+    print(pEnergyTimeStep)
 
     # Compute the minimum TimeStep across the three DataFrames
-    pGeneratorTimeStep['TimeStep'] = (
-         pStorageTimeStep['TimeStep']
-        .combine(pOutflowsTimeStep['TimeStep'], func=min)
-        .combine(pEnergyTimeStep['TimeStep'], func=min)
-    )
-
+    pStorageTimeStep = pd.concat([pStorageTimeStep, pOutflowsTimeStep, pEnergyTimeStep]).groupby(level=[0, 1, 2]).min()
 
     # Print result
     print("000000000000")
@@ -980,7 +980,7 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     print("232323232323")
     print(pEnergyTimeStep)
     print("676767676767676767")
-    print(pGeneratorTimeStep)
+
 
     if pIndHydroTopology == 1:
         # %% definition of the time-steps leap to observe the stored energy at a reservoir
@@ -1009,39 +1009,7 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         # cycle water step can't exceed the stage duration
         pReservoirTimeStep = pReservoirTimeStep.where(pReservoirTimeStep <= pStageDuration.min(), pStageDuration.min())
 
-    # initial inventory must be between minimum and maximum
-    pInitialInventory  = pInitialInventory.where(pInitialInventory > pRatedMinStorage, pRatedMinStorage)
-    pInitialInventory  = pInitialInventory.where(pInitialInventory < pRatedMaxStorage, pRatedMaxStorage)
-    if pIndHydroTopology == 1:
-        pInitialVolume = pInitialVolume.where   (pInitialVolume    > pRatedMinVolume,  pRatedMinVolume )
-        pInitialVolume = pInitialVolume.where   (pInitialVolume    < pRatedMaxVolume,  pRatedMaxVolume )
 
-    # initial inventory of the candidate storage units equal to its maximum capacity if the storage capacity is linked to the investment decision
-    pInitialInventory.update(pd.Series([pInitialInventory[ec] if pIndBinStorInvest[ec] == 0 else pRatedMaxStorage[ec] for ec in mTEPES.ec], index=mTEPES.ec, dtype='float64'))
-
-    # parameter that allows the initial inventory to change with load level
-    pIniInventory  = pd.DataFrame([pInitialInventory]*len(mTEPES.psn), index=pd.MultiIndex.from_tuples(mTEPES.psn), columns=mTEPES.es)
-    if pIndHydroTopology == 1:
-        pIniVolume = pd.DataFrame([pInitialVolume   ]*len(mTEPES.psn), index=pd.MultiIndex.from_tuples(mTEPES.psn), columns=mTEPES.rs)
-
-    # initial inventory must be between minimum and maximum
-    for p,sc,n,es in mTEPES.psnes:
-        if (p,sc,st,n) in mTEPES.s2n and mTEPES.n.ord(n) == pStorageTimeStep[es]:
-            if  pIniInventory[es][p,sc,n] < pMinStorage[es][p,sc,n]:
-                pIniInventory[es][p,sc,n] = pMinStorage[es][p,sc,n]
-                print('### Initial inventory lower than minimum storage ',   es)
-            if  pIniInventory[es][p,sc,n] > pMaxStorage[es][p,sc,n]:
-                pIniInventory[es][p,sc,n] = pMaxStorage[es][p,sc,n]
-                print('### Initial inventory greater than maximum storage ', es)
-    if pIndHydroTopology == 1:
-        for p,sc,n,rs in mTEPES.psnrs:
-            if (p,sc,st,n) in mTEPES.s2n and mTEPES.n.ord(n) == pReservoirTimeStep[rs]:
-                if  pIniVolume[rs][p,sc,n] < pMinVolume[rs][p,sc,n]:
-                    pIniVolume[rs][p,sc,n] = pMinVolume[rs][p,sc,n]
-                    print('### Initial volume lower than minimum volume ',   rs)
-                if  pIniVolume[rs][p,sc,n] > pMaxVolume[rs][p,sc,n]:
-                    pIniVolume[rs][p,sc,n] = pMaxVolume[rs][p,sc,n]
-                    print('### Initial volume greater than maximum volume ', rs)
 
     # drop load levels with duration 0
     pDuration            = pDuration.loc            [mTEPES.psn  ]
@@ -1624,6 +1592,47 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
     # generators with min/max energy
     mTEPES.gm     = [(p,sc,g ) for p,sc,g  in mTEPES.psg  if sum(mTEPES.pMinEnergy     [p,sc,n2,g ]   for n2 in mTEPES.n2 if (p,sc,n2) in mTEPES.psn)]
     mTEPES.gM     = [(p,sc,g ) for p,sc,g  in mTEPES.psg  if sum(mTEPES.pMaxEnergy     [p,sc,n2,g ]   for n2 in mTEPES.n2 if (p,sc,n2) in mTEPES.psn)]
+
+
+    # initial inventory must be between minimum and maximum
+    pInitialInventory  = pInitialInventory.where(pInitialInventory > pRatedMinStorage, pRatedMinStorage)
+    pInitialInventory  = pInitialInventory.where(pInitialInventory < pRatedMaxStorage, pRatedMaxStorage)
+    if pIndHydroTopology == 1:
+        pInitialVolume = pInitialVolume.where   (pInitialVolume    > pRatedMinVolume,  pRatedMinVolume )
+        pInitialVolume = pInitialVolume.where   (pInitialVolume    < pRatedMaxVolume,  pRatedMaxVolume )
+
+    # initial inventory of the candidate storage units equal to its maximum capacity if the storage capacity is linked to the investment decision
+    pInitialInventory.update(pd.Series([pInitialInventory[ec] if pIndBinStorInvest[ec] == 0 else pRatedMaxStorage[ec] for ec in mTEPES.ec], index=mTEPES.ec, dtype='float64'))
+
+    # parameter that allows the initial inventory to change with load level
+    pIniInventory  = pd.DataFrame([pInitialInventory]*len(mTEPES.psn), index=pd.MultiIndex.from_tuples(mTEPES.psn), columns=mTEPES.es)
+    if pIndHydroTopology == 1:
+        pIniVolume = pd.DataFrame([pInitialVolume   ]*len(mTEPES.psn), index=pd.MultiIndex.from_tuples(mTEPES.psn), columns=mTEPES.rs)
+
+    # initial inventory must be between minimum and maximum
+    # for p,sc,n,es in mTEPES.psnes:
+    for p in mTEPES.Period:
+        Period = mTEPES.Period[p]
+        for sc in Period.Scenario:
+            Scenario = Period.Scenarip[sc]
+            for st in Scenario.Stage:
+                Stage = Scenario.Stage[st]
+                for n in Stage.n:
+                    if Stage.n.ord(n) == Stage.pStorageTimeStep[es]:
+                        if  pIniInventory[es][p,sc,n] < pMinStorage[es][p,sc,n]:
+                            pIniInventory[es][p,sc,n] = pMinStorage[es][p,sc,n]
+                            print('### Initial inventory lower than minimum storage ',   es)
+                        if  pIniInventory[es][p,sc,n] > pMaxStorage[es][p,sc,n]:
+                            pIniInventory[es][p,sc,n] = pMaxStorage[es][p,sc,n]
+                            print('### Initial inventory greater than maximum storage ', es)
+                    if pIndHydroTopology == 1:
+                        if Stage.n.ord(n) == pReservoirTimeStep[rs]:
+                            if  pIniVolume[rs][p,sc,n] < pMinVolume[rs][p,sc,n]:
+                                pIniVolume[rs][p,sc,n] = pMinVolume[rs][p,sc,n]
+                                print('### Initial volume lower than minimum volume ',   rs)
+                            if  pIniVolume[rs][p,sc,n] > pMaxVolume[rs][p,sc,n]:
+                                pIniVolume[rs][p,sc,n] = pMaxVolume[rs][p,sc,n]
+                                print('### Initial volume greater than maximum volume ', rs)
 
     # # if unit availability = 0 changed to 1
     # for g in mTEPES.g:
