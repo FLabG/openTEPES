@@ -1616,7 +1616,7 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         if sum(1 for h,rs in mTEPES.p2r):
             mTEPES.psnp2c = [(p,sc,n,h ) for p,sc,n,h  in mTEPES.psn*mTEPES.h  if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (h,rs) in mTEPES.p2r) == 0 and sum(1 for rs in mTEPES.rs if (h,rs) in mTEPES.p2r)]
         else:
-            mTEPES.np2c = []
+            mTEPES.psnnp2c = []
         if sum(1 for rs,h in mTEPES.r2p):
             mTEPES.psnpc    = [(p,sc,n,h ) for p,sc,n,h  in mTEPES.psn*mTEPES.h  if (p,sc,n) in (p,sc,n) for p,sc,st,n in mTEPES.s2n and mTEPES.n.ord(n) % sum(mTEPES.pReservoirTimeStep[rs] for rs in mTEPES.rs if (rs,h) in mTEPES.r2p) == 0 and sum(1 for rs in mTEPES.rs if (rs,h) in mTEPES.r2p)]
         else:
