@@ -2469,10 +2469,6 @@ def SettingUpVariables(OptModel, mTEPES):
                 mTEPES.IndependentStages[p] = True
     if all(mTEPES.IndependentStages[p]() for p in mTEPES.pp):
         mTEPES.IndependentStages2 = True
-    print("rererererererrer")
-    for _ in mTEPES.s2n:
-        print(_)
-    print("qwqwqwqwqwqwqwqwqw")
 
 
     mTEPES.Period = Block(mTEPES.pp)
@@ -2481,16 +2477,13 @@ def SettingUpVariables(OptModel, mTEPES):
         Period.Scenario = Block(mTEPES.sc)
         Period.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if pp == p])
         for sc in Period.Scenario:
-            print("wawawawawawa")
             Scenario = Period.Scenario[sc]
             Scenario.Stage = Block(Set(initialize=[stt for pp,scc,stt, nn in mTEPES.s2n if scc == sc and pp == p]))
             Scenario.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if scc == sc and pp == p])
 
         # iterative model formulation for each stage of a year
-            print("lululululu")
             for st in Scenario.Stage:
                 Stage = Scenario.Stage[st]
-                print(f"P:{p},Sc:{sc},St:{st}")
                 Stage.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
                 Stage.n2 = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if stt == st and scc == sc and pp == p])
 
@@ -2514,11 +2507,6 @@ def SettingUpVariables(OptModel, mTEPES):
                     Stage.nrcc     = [(n,rs) for n,rs in Stage.n*mTEPES.rn if mTEPES.n.ord(n) %     mTEPES.pReservoirTimeStep[rs] == 0]
                     Stage.nrso     = [(n,rs) for n,rs in Stage.n*mTEPES.rs if mTEPES.n.ord(n) %     mTEPES.pWaterOutTimeStep [rs] == 0]
 
-    for p in mTEPES.Period:
-        for sc in mTEPES.Period[p].Scenario:
-            for st in mTEPES.Period[p].Scenario[sc].Stage:
-                for n in mTEPES.Period[p].Scenario[sc].Stage[st].n:
-                    print(f"Periodo:{p}, Scenario:{sc}, Stage:{st}Hora:{n}")
 
 
 

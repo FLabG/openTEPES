@@ -11,7 +11,7 @@ from   pyomo.environ import Constraint, Objective, minimize, Set, RangeSet, Para
 
 
 def TotalObjectiveFunction(OptModel, mTEPES, pIndLogConsole):
-    print('Total cost o.f.      model formulation ****')
+    # print('Total cost o.f.      model formulation ****')
 
     StartTime = time.time()
 
@@ -28,7 +28,7 @@ def TotalObjectiveFunction(OptModel, mTEPES, pIndLogConsole):
         print('Total fixed and variable costs         ... ', round(GeneratingTime), 's')
 
 def ScenarioObjectiveFunction(OptModel, mTEPES, pIndLogConsole,p,sc):
-    print('Period cost o.f.      model formulation ****')
+    # print('Period cost o.f.      model formulation ****')
 
     StartTime = time.time()
 
@@ -45,7 +45,7 @@ def ScenarioObjectiveFunction(OptModel, mTEPES, pIndLogConsole,p,sc):
         print('Total fixed and variable costs         ... ', round(GeneratingTime), 's')
 
 def StageObjectiveFunction(OptModel, mTEPES, pIndLogConsole,p,sc,st):
-    print('Period cost o.f.      model formulation ****')
+    # print('Period cost o.f.      model formulation ****')
 
     StartTime = time.time()
 
@@ -63,7 +63,7 @@ def StageObjectiveFunction(OptModel, mTEPES, pIndLogConsole,p,sc,st):
 
 
 def InvestmentModelFormulation(OptModel, mTEPES, pIndLogConsole):
-    print('Investment           model formulation ****')
+    # print('Investment           model formulation ****')
 
     StartTime = time.time()
 
@@ -143,7 +143,7 @@ def InvestmentModelFormulation(OptModel, mTEPES, pIndLogConsole):
 
 
 def GenerationOperationModelFormulationObjFunct(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Generation oper o.f. model formulation ****')
+    # print('Generation oper o.f. model formulation ****')
 
     StartTime = time.time()
 
@@ -236,7 +236,7 @@ def GenerationOperationModelFormulationObjFunct(OptModel, mTEPES, pIndLogConsole
 
 
 def GenerationOperationModelFormulationInvestment(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Investment & operation var constraints ****')
+    # print('Investment & operation var constraints ****')
 
     StartTime = time.time()
 
@@ -379,7 +379,7 @@ def GenerationOperationModelFormulationInvestment(OptModel, mTEPES, pIndLogConso
 
 
 def GenerationOperationModelFormulationDemand(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Inertia, oper resr, demand constraints ****')
+    # print('Inertia, oper resr, demand constraints ****')
 
     StartTime = time.time()
 
@@ -564,7 +564,7 @@ def GenerationOperationModelFormulationDemand(OptModel, mTEPES, pIndLogConsole, 
 
 
 def GenerationOperationModelFormulationStorage(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Storage   scheduling       constraints ****')
+    # print('Storage   scheduling       constraints ****')
 
     StartTime = time.time()
 
@@ -775,7 +775,7 @@ def GenerationOperationModelFormulationStorage(OptModel, mTEPES, pIndLogConsole,
         print('Generating storage operation           ... ', round(GeneratingTime), 's')
 
 def GenerationOperationModelFormulationReservoir(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Reservoir scheduling       constraints ****')
+    # print('Reservoir scheduling       constraints ****')
 
     StartTime = time.time()
 
@@ -910,7 +910,7 @@ def GenerationOperationModelFormulationReservoir(OptModel, mTEPES, pIndLogConsol
 
 
 def GenerationOperationModelFormulationCommitment(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Unit commitment            constraints ****')
+    # print('Unit commitment            constraints ****')
 
     StartTime = time.time()
 
@@ -1038,7 +1038,7 @@ def GenerationOperationModelFormulationCommitment(OptModel, mTEPES, pIndLogConso
 
 
 def GenerationOperationModelFormulationRampMinTime(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Ramp and min up/down time  constraints ****')
+    # print('Ramp and min up/down time  constraints ****')
 
     StartTime = time.time()
 
@@ -1231,7 +1231,7 @@ def GenerationOperationModelFormulationRampMinTime(OptModel, mTEPES, pIndLogCons
 
 
 def NetworkSwitchingModelFormulation(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Network    switching model constraints ****')
+    # print('Network    switching model constraints ****')
 
     StartTime = time.time()
 
@@ -1296,7 +1296,7 @@ def NetworkSwitchingModelFormulation(OptModel, mTEPES, pIndLogConsole, p, sc, st
 
 
 def NetworkOperationModelFormulation(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Network    operation model constraints ****')
+    # print('Network    operation model constraints ****')
 
     StartTime = time.time()
 
@@ -1369,7 +1369,7 @@ def NetworkOperationModelFormulation(OptModel, mTEPES, pIndLogConsole, p, sc, st
 
 
 def NetworkCycles(mTEPES, pIndLogConsole):
-    print('Network               Cycles Detection ****')
+    # print('Network               Cycles Detection ****')
 
     StartTime = time.time()
 
@@ -1440,7 +1440,7 @@ def NetworkCycles(mTEPES, pIndLogConsole):
         print('Cycles detection                      ... ', round(CyclesDetectionTime), 's')
 
 def CycleConstraints(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Network              cycle constraints ****')
+    # print('Network              cycle constraints ****')
 
     StartTime = time.time()
 
@@ -1491,7 +1491,7 @@ def CycleConstraints(OptModel, mTEPES, pIndLogConsole, p, sc, st):
         print('Generating cycle flow constraints       ... ', round(CycleFlowTime), 's')
 
 def NetworkH2OperationModelFormulation(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Hydrogen  scheduling       constraints ****')
+    # print('Hydrogen  scheduling       constraints ****')
 
     StartTime = time.time()
 
@@ -1531,7 +1531,7 @@ def NetworkH2OperationModelFormulation(OptModel, mTEPES, pIndLogConsole, p, sc, 
 
 
 def NetworkHeatOperationModelFormulation(OptModel, mTEPES, pIndLogConsole, p, sc, st):
-    print('Heat      scheduling       constraints ****')
+    # print('Heat      scheduling       constraints ****')
 
     StartTime = time.time()
 

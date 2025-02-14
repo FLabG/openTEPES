@@ -17,7 +17,7 @@ from .openTEPES_ProblemSolving   import ProblemSolving
 from .openTEPES_OutputResults    import OutputResultsParVarCon, InvestmentResults, GenerationOperationResults, GenerationOperationHeatResults, ESSOperationResults, ReservoirOperationResults, NetworkH2OperationResults, NetworkHeatOperationResults, FlexibilityResults, NetworkOperationResults, MarginalResults, OperationSummaryResults, ReliabilityResults, CostSummaryResults, EconomicResults, NetworkMapResults
 
 from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
-
+wlp  = True
 def WriteLP(mTEPES,_path,CaseName,p,sc,st):
     StartTime = time.time()
     mTEPES.write(f'{_path}/openTEPES_{CaseName}_{p}_{sc}_{st}.lp', io_options={'symbolic_solver_labels': True})
@@ -25,6 +25,7 @@ def WriteLP(mTEPES,_path,CaseName,p,sc,st):
     StartTime = time.time()
     print('Writing LP file                         ... ', round(WritingLPFileTime), 's')
 def GenerateModel(mTEPES,pIndLogConsole,pIndCycleFlow,p,sc,st,):
+    gentimes = time.perf_counter()
     GenerationOperationModelFormulationObjFunct(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
     GenerationOperationModelFormulationInvestment(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
     GenerationOperationModelFormulationDemand(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
@@ -44,6 +45,33 @@ def GenerateModel(mTEPES,pIndLogConsole,pIndCycleFlow,p,sc,st,):
         if st == mTEPES.First_st:
             NetworkCycles(mTEPES, pIndLogConsole)
         CycleConstraints(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    gentimee = time.perf_counter()
+    print(f"Generation time:{gentimee -gentimes}, P:{p},ST:{st}")
+
+def GenerateModelwoInv(mTEPES,pIndLogConsole,pIndCycleFlow,p,sc,st,):
+    gentimes = time.perf_counter()
+    GenerationOperationModelFormulationObjFunct(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    # GenerationOperationModelFormulationInvestment(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    GenerationOperationModelFormulationDemand(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    GenerationOperationModelFormulationStorage(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    if mTEPES.pIndHydroTopology == 1:
+        GenerationOperationModelFormulationReservoir(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    if mTEPES.pIndHydrogen == 1:
+        NetworkH2OperationModelFormulation(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    if mTEPES.pIndHeat == 1:
+        NetworkHeatOperationModelFormulation(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    GenerationOperationModelFormulationCommitment(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    GenerationOperationModelFormulationRampMinTime(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    NetworkSwitchingModelFormulation(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    NetworkOperationModelFormulation(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    # introduce cycle flow formulations
+    if pIndCycleFlow == 1:
+        if st == mTEPES.First_st:
+            NetworkCycles(mTEPES, pIndLogConsole)
+        CycleConstraints(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    gentimee = time.perf_counter()
+    print(f"Generation time:{gentimee -gentimes}, P:{p},ST:{st}")
+
 
 def GenerateAndSolveModel(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName):
     # TotalObjectiveFunction(mTEPES, mTEPES, pIndLogConsole)
@@ -69,56 +97,59 @@ def GenerateAndSolveModel(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, C
             for st in Scenario.Stage:
                 Stage = Scenario.Stage[st]
                 GenerateModel(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
-    if pIndLogConsole == 1:
+    if pIndLogConsole == 1 or wlp == True:
         StartTime = time.time()
-        mTEPES.write(f'{_path}/openTEPES_{CaseName}.lp', io_options={'symbolic_solver_labels': True})
+        mTEPES.write(f'{_path}/openTEPES_{CaseName}_series.lp', io_options={'symbolic_solver_labels': True})
         WritingLPFileTime = time.time() - StartTime
         StartTime = time.time()
         print(f'Writing LP file for                 ... {round(WritingLPFileTime)} s')
+    pss = time.perf_counter()
     ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
-
+    pse = time.perf_counter()
+    print(f"Solve time:{pse-pss}")
 
 def GenerateAndSolveScenario(mTEPES, pIndLogConsole, pIndCycleFlow, _path, DirName, CaseName, SolverName,p,sc):
-        # This is the actual work for one scenario
-        Period = mTEPES.Period[p]
-        Scenario = mTEPES.Period[p].Scenario[sc]
-        ScenarioObjectiveFunction(mTEPES, mTEPES, pIndLogConsole, p, sc)
-        for st in Scenario.Stage:
-            Stage = Scenario.Stage[st]
-            GenerateModel(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
+    print(f"gen and solve p:{p},sc:{sc}")
+    # This is the actual work for one scenario
+    Period = mTEPES.Period[p]
+    Scenario = mTEPES.Period[p].Scenario[sc]
+    ScenarioObjectiveFunction(mTEPES, mTEPES, pIndLogConsole, p, sc)
+    for st in Scenario.Stage:
+        Stage = Scenario.Stage[st]
+        GenerateModelwoInv(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
 
+    if pIndLogConsole == 1 or wlp == True:
+        StartTime = time.time()
+        mTEPES.write(f'{_path}/openTEPES_{CaseName}_{p}_{sc}_paral_scenario.lp', io_options={'symbolic_solver_labels': True})
+        WritingLPFileTime = time.time() - StartTime
+        StartTime = time.time()
+        print(f'Writing LP file for {p} {sc}                        ... {round(WritingLPFileTime)} s')
+    print(f"barrier reached, p:{p}")
+    pss = time.perf_counter()
+    ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    pse = time.perf_counter()
+    print(f"Solve time:{pse - pss}")
+
+
+
+def GenerateAndSolveStages(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName,p,sc,st):
+    Period = mTEPES.Period[p]
+    Scenario = mTEPES.Period[p].Scenario[sc]
+    Stage = mTEPES.Period[p].Scenario[sc].Stage[st]
+    StageObjectiveFunction(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    GenerateModel(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
+
+    if pIndLogConsole == 1:
         if pIndLogConsole == 1:
             StartTime = time.time()
-            mTEPES.write(f'{_path}/openTEPES_{CaseName}_{p}_{sc}.lp', io_options={'symbolic_solver_labels': True})
+            mTEPES.write(f'{_path}/openTEPES_{CaseName}_{p}_{sc}_{st}.lp', io_options={'symbolic_solver_labels': True})
             WritingLPFileTime = time.time() - StartTime
             StartTime = time.time()
-            print(f'Writing LP file for {p} {sc}                        ... {round(WritingLPFileTime)} s')
-
-        # Call ProblemSolving
-        ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
-
-
-
-def GenerateAndSolveStages(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName, parallel):
-    for p in mTEPES.Period:
-        Period = mTEPES.Period[p]
-        for sc in Period.Scenario:
-            Scenario = Period.Scenario[sc]
-            for st in Scenario.Stage:
-                Stage = Scenario.Stage[st]
-
-                StageObjectiveFunction(mTEPES, mTEPES, pIndLogConsole, p, sc, st)
-                GenerateModel(mTEPES, pIndLogConsole, pIndCycleFlow, p, sc, st)
-
-                if pIndLogConsole == 1:
-                    if pIndLogConsole == 1:
-                        StartTime = time.time()
-                        mTEPES.write(f'{_path}/openTEPES_{CaseName}_{p}_{sc}_{st}.lp', io_options={'symbolic_solver_labels': True})
-                        WritingLPFileTime = time.time() - StartTime
-                        StartTime = time.time()
-                        print(f'Writing LP file for {p} {sc} {st}   ... {round(WritingLPFileTime)} s')
-
-                ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+            print(f'Writing LP file for {p} {sc} {st}   ... {round(WritingLPFileTime)} s')
+    pss = time.perf_counter()
+    ProblemSolving(DirName, CaseName, SolverName, mTEPES, mTEPES, pIndLogConsole, p, sc, st)
+    pse = time.perf_counter()
+    print(f"Solve time:{pse - pss}")
 
 
 def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConsole):
@@ -176,14 +207,15 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
     mTEPES.NoRepetition = 0
     StIndep = ScIndep = False
     # mTEPES.Parallel = False
-    if mTEPES.IndependentPeriods() == False or True: #There is investment and the problem needs to be solved as a whole
+    if mTEPES.IndependentPeriods() == False: #There is investment and the problem needs to be solved as a whole
         print("Not parallel")
         GenerateAndSolveModel(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName)
 
-    elif mTEPES.IndependentPeriods() == True and mTEPES.IndependentStages2() == False: #No investment but emissions or RES requirements linking stages together
+    elif mTEPES.IndependentPeriods() == True and mTEPES.IndependentStages2() == False or True: #No investment but emissions or RES requirements linking stages together
         print("parallel Scenarios")
+            # barrier = True
         if mTEPES.Parallel():
-            with ProcessPoolExecutor(max_workers=8) as executor:
+            with ProcessPoolExecutor(max_workers=7) as executor:
                 futures = []
                 for p in mTEPES.Period:
                     for sc in mTEPES.Period[p].Scenario:
@@ -197,7 +229,19 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
 
     elif mTEPES.IndependentPeriods() == True and mTEPES.IndependentStages2() == True: #All stages are independent from each other so they can be solved separately
         print("parallel Stages")
-        GenerateAndSolveStages(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName, mTEPES.Parallel())
+        if mTEPES.Parallel():
+            with ProcessPoolExecutor(max_workers=8) as executor:
+                futures = []
+                for p in mTEPES.Period:
+                    for sc in mTEPES.Period[p].Scenario:
+                        futures.append(executor.submit(GenerateAndSolveStages,mTEPES, pIndLogConsole, pIndCycleFlow, _path, DirName, CaseName, SolverName,p,sc))
+        else:
+            for p in mTEPES.Period:
+                for sc in mTEPES.Period[p].Scenario:
+                    for st in mTEPES.Period[p].Scenario[sc].Stage:
+                        GenerateAndSolveStages(mTEPES, pIndLogConsole, pIndCycleFlow, _path, DirName, CaseName, SolverName, p, sc)
+
+        # GenerateAndSolveStages(mTEPES,pIndLogConsole,pIndCycleFlow, _path, DirName, CaseName, SolverName)
 
     PostSolve = time.time()
     print(f"PostSolve time:{PostSolve - InitialTime}")
