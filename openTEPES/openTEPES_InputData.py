@@ -378,6 +378,13 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         for n in range(pTimeStep-2,-1,-1):
             pDuration.iloc[[range(n,len(mTEPES.pp)*len(mTEPES.scc)*len(mTEPES.nn),pTimeStep)]] = 0
 
+        for psn in pDuration.index:
+            p, sc, n = psn
+            if pPeriodWeight[p] == 0:
+                pDuration.loc[p, sc, n] = 0
+            if pScenProb[p, sc] == 0:
+                pDuration.loc[p, sc, n] = 0
+
     #%% generation parameters
     pGenToNode                  = dfGeneration  ['Node'                      ]                                                      # generator location in node
     pGenToTechnology            = dfGeneration  ['Technology'                ]                                                      # generator association to technology
@@ -2461,7 +2468,10 @@ def SettingUpVariables(OptModel, mTEPES):
         # Periods and scenarios are independent from each other
         ScIndep = True
         mTEPES.IndependentPeriods = True
-        for p in mTEPES.pp:
+        for p, ar in mTEPES.pEmission:
+            print(p,ar)
+            print(mTEPES.pEmission[p,ar])
+        for p in mTEPES.p:
             if (    (min([mTEPES.pEmission[p, ar] for ar in mTEPES.ar]) == math.inf or sum(mTEPES.pEmissionRate[nr] for nr in mTEPES.nr) == 0)  # No emissions
                 and (max([mTEPES.pRESEnergy[p, ar] for ar in mTEPES.ar]) == 0)):  # No minimum RES requirements
             # Stages are independent from each other
@@ -2471,9 +2481,11 @@ def SettingUpVariables(OptModel, mTEPES):
         mTEPES.IndependentStages2 = True
 
 
-    mTEPES.Period = Block(mTEPES.pp)
+    mTEPES.Period = Block(mTEPES.p)
     for p in mTEPES.Period:
         Period = mTEPES.Period[p]
+        #TODO: Filter in some way that scenarios may not belong to periods
+        # period2scenario = [stt for pp, scc, stt, nn in mTEPES.s2n if scc == sc and pp == p]
         Period.Scenario = Block(mTEPES.sc)
         Period.n = Set(doc='load levels', initialize=[nn for pp, scc, stt, nn in mTEPES.s2n if pp == p])
         for sc in Period.Scenario:

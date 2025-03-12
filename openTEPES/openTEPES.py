@@ -220,6 +220,12 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
                 for p in mTEPES.Period:
                     for sc in mTEPES.Period[p].Scenario:
                         futures.append(executor.submit(GenerateAndSolveScenario,mTEPES, pIndLogConsole, pIndCycleFlow, _path, DirName, CaseName, SolverName,p,sc))
+                for future in as_completed(futures):
+                    # Optionally, you can check for exceptions here
+                    try:
+                        result = future.result()  # This will re-raise any exception raised by the task
+                    except Exception as e:
+                        print(f"An error occurred: {e}")
         else:
             for p in mTEPES.Period:
                 for sc in mTEPES.Period[p].Scenario:
