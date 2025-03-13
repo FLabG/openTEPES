@@ -384,6 +384,7 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
                 pDuration.loc[p, sc, n] = 0
             if pScenProb[p, sc] == 0:
                 pDuration.loc[p, sc, n] = 0
+        print(pDuration)
 
     #%% generation parameters
     pGenToNode                  = dfGeneration  ['Node'                      ]                                                      # generator location in node
@@ -690,6 +691,8 @@ def InputData(DirName, CaseName, mTEPES, pIndLogConsole):
         mTEPES.pseh      = Set(initialize = [(p,sc,  eh)       for p,sc,  eh       in mTEPES.ps *mTEPES.eh  if (p,eh)  in mTEPES.peh ])
         mTEPES.psn       = Set(initialize = [(p,sc,n   )       for p,sc,n          in mTEPES.ps *mTEPES.n                            ])
         mTEPES.psng      = Set(initialize = [(p,sc,n,g )       for p,sc,n,g        in mTEPES.psn*mTEPES.g   if (p,g )  in mTEPES.pg  ])
+        for p,sc,n,g in mTEPES.psng:
+            print(p,sc,n,g)
         mTEPES.psngc     = Set(initialize = [(p,sc,n,gc)       for p,sc,n,gc       in mTEPES.psn*mTEPES.gc  if (p,gc)  in mTEPES.pgc ])
         mTEPES.psngb     = Set(initialize = [(p,sc,n,gb)       for p,sc,n,gb       in mTEPES.psn*mTEPES.gb  if (p,gb)  in mTEPES.pgc ])
         mTEPES.psnre     = Set(initialize = [(p,sc,n,re)       for p,sc,n,re       in mTEPES.psn*mTEPES.re  if (p,re)  in mTEPES.pre ])
@@ -2480,9 +2483,11 @@ def SettingUpVariables(OptModel, mTEPES):
     if all(mTEPES.IndependentStages[p]() for p in mTEPES.pp):
         mTEPES.IndependentStages2 = True
 
-
+    for p in mTEPES.p:
+        print("periods in p",p)
     mTEPES.Period = Block(mTEPES.p)
     for p in mTEPES.Period:
+        print("period",p)
         Period = mTEPES.Period[p]
         #TODO: Filter in some way that scenarios may not belong to periods
         # period2scenario = [stt for pp, scc, stt, nn in mTEPES.s2n if scc == sc and pp == p]

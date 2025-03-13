@@ -252,42 +252,6 @@ def openTEPES_run(DirName, CaseName, SolverName, pIndOutputResults, pIndLogConso
     PostSolve = time.time()
     print(f"PostSolve time:{PostSolve - InitialTime}")
 
-
-
-    # paral = False
-    # print(f"Paral:{paral}")
-    #
-    # if paral == True:
-    #     with ThreadPoolExecutor() as executor:
-    #         # Create tasks for each (p, sc, st) combination
-    #         futures = [
-    #             executor.submit(LoopPScSt, p, sc, st)
-    #             for p, sc, st in mTEPES.ps * mTEPES.stt
-    #         ]
-    #
-    #         # Optionally, wait for all tasks to complete
-    #         for future in as_completed(futures):
-    #             try:
-    #                 future.result()  # Wait for each task to complete
-    #             except Exception as e:
-    #                 print(f"Task raised an exception: {e}")
-    #
-    # if paral == False:
-    #     for p, sc, st in mTEPES.ps * mTEPES.stt:
-    #         LoopPScSt(p,sc,st)
-
-    # # activate the constraints of all the periods and scenarios
-    # for c in mTEPES.component_objects(pyo.Constraint):
-    #     c.activate()
-    #
-    # # assign probability 1 to all the periods and scenarios
-    # for p,sc in mTEPES.ps:
-    #     mTEPES.pScenProb[p,sc] = 1.0
-
-    # pickle the case study data
-    # with open(dump_folder+f'/oT_Case_{CaseName}.pkl','wb') as f:
-    #     pickle.dump(mTEPES, f, pickle.HIGHEST_PROTOCOL)
-
     # output results only for every unit (0), only for every technology (1), or for both (2)
     pIndTechnologyOutput = 2
 
