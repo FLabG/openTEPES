@@ -164,36 +164,49 @@ def GenerationOperationModelFormulationObjFunct(OptModel, mTEPES, pIndLogConsole
     setattr(OptModel, f'eTotalCCost_{p}_{sc}_{st}', Constraint(mTEPES.n, rule=eTotalCCost, doc='system variable consumption operation cost [MEUR]'))
 
     def eTotalECost(OptModel,n):
-        if sum(mTEPES.pEmissionVarCost[p,sc,n,g] for g in mTEPES.g if (p,g) in mTEPES.pg):
-            return OptModel.vTotalECost[p,sc,n] == sum(OptModel.vTotalECostArea[p,sc,n,ar] for ar in mTEPES.ar)
-        else:
+        # Skip if no available generator in the system has emission cost
+        if sum(mTEPES.pEmissionVarCost[p,sc,n,g] for g in mTEPES.g if (p,g) in mTEPES.pg) == 0:
             return Constraint.Skip
+
+        return OptModel.vTotalECost[p,sc,n] == sum(OptModel.vTotalECostArea[p,sc,n,ar] for ar in mTEPES.ar)
+
     setattr(OptModel, f'eTotalECost_{p}_{sc}_{st}', Constraint(mTEPES.n, rule=eTotalECost, doc='system emission cost [MEUR]'))
 
     def eTotalEmissionArea(OptModel,n,ar):
-        if sum(mTEPES.pEmissionRate[g] for g in mTEPES.g if (ar, g) in mTEPES.a2g and (p, g) in mTEPES.pg):
-            return OptModel.vTotalEmissionArea[p,sc,n,ar] == (sum(mTEPES.pLoadLevelDuration[p,sc,n]() * mTEPES.pEmissionRate[nr] * 1e-3 * OptModel.vTotalOutput    [p,sc,n,nr] for nr in mTEPES.nr if (ar,nr) in mTEPES.a2g and (p,nr) in mTEPES.pnr)    #1e-3 to change from tCO2/MWh to MtCO2/GWh
-                                                            + sum(mTEPES.pLoadLevelDuration[p,sc,n]() * mTEPES.pEmissionRate[bo] * 1e-3 * OptModel.vTotalOutputHeat[p,sc,n,bo] for bo in mTEPES.bo if (ar,bo) in mTEPES.a2g and (p,bo) in mTEPES.pbo))   #1e-3 to change from tCO2/MWh to MtCO2/GWh
-        else:
+        # Skip if no available generator in this Area generates emissions
+        if sum(mTEPES.pEmissionRate[g] for g in mTEPES.g if (ar, g) in mTEPES.a2g and (p, g) in mTEPES.pg) == 0:
             return Constraint.Skip
+        return OptModel.vTotalEmissionArea[p,sc,n,ar] == (sum(mTEPES.pLoadLevelDuration[p,sc,n]() * mTEPES.pEmissionRate[nr] * 1e-3 * OptModel.vTotalOutput    [p,sc,n,nr] for nr in mTEPES.nr if (ar,nr) in mTEPES.a2g and (p,nr) in mTEPES.pnr)    #1e-3 to change from tCO2/MWh to MtCO2/GWh
+                                                        + sum(mTEPES.pLoadLevelDuration[p,sc,n]() * mTEPES.pEmissionRate[bo] * 1e-3 * OptModel.vTotalOutputHeat[p,sc,n,bo] for bo in mTEPES.bo if (ar,bo) in mTEPES.a2g and (p,bo) in mTEPES.pbo))   #1e-3 to change from tCO2/MWh to MtCO2/GWh
+
     setattr(OptModel, f'eTotalEmissionArea_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.ar, rule=eTotalEmissionArea, doc='area total emission [MtCO2 eq]'))
 
     def eTotalECostArea(OptModel,n,ar):
-        if sum(mTEPES.pEmissionVarCost[p,sc,n,g] for g in mTEPES.g if (ar,g) in mTEPES.a2g and (p,g) in mTEPES.pg):
-            return OptModel.vTotalECostArea[p,sc,n,ar] == (sum(mTEPES.pLoadLevelDuration[p,sc,n]() * mTEPES.pEmissionVarCost[p,sc,n,nr] * OptModel.vTotalOutput    [p,sc,n,nr] for nr in mTEPES.nr if (ar,nr) in mTEPES.a2g and (p,nr) in mTEPES.pnr)
-                                                        +  sum(mTEPES.pLoadLevelDuration[p,sc,n]() * mTEPES.pEmissionVarCost[p,sc,n,bo] * OptModel.vTotalOutputHeat[p,sc,n,bo] for bo in mTEPES.bo if (ar,bo) in mTEPES.a2g and (p,bo) in mTEPES.pbo))
-        else:
+        # Skip if no available generator in this Area has emission cost
+        if sum(mTEPES.pEmissionVarCost[p,sc,n,g] for g in mTEPES.g if (ar,g) in mTEPES.a2g and (p,g) in mTEPES.pg) == 0:
             return Constraint.Skip
+        return OptModel.vTotalECostArea[p,sc,n,ar] == (sum(mTEPES.pLoadLevelDuration[p,sc,n]() * mTEPES.pEmissionVarCost[p,sc,n,nr] * OptModel.vTotalOutput    [p,sc,n,nr] for nr in mTEPES.nr if (ar,nr) in mTEPES.a2g and (p,nr) in mTEPES.pnr)
+                                                    +  sum(mTEPES.pLoadLevelDuration[p,sc,n]() * mTEPES.pEmissionVarCost[p,sc,n,bo] * OptModel.vTotalOutputHeat[p,sc,n,bo] for bo in mTEPES.bo if (ar,bo) in mTEPES.a2g and (p,bo) in mTEPES.pbo))
+
     setattr(OptModel, f'eTotalECostArea_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.ar, rule=eTotalECostArea, doc='area emission cost [MEUR]'))
 
     def eTotalRESEnergyArea(OptModel,n,ar):
-        if mTEPES.pRESEnergy[p,ar] and st == mTEPES.Last_st:
-            return OptModel.vTotalRESEnergyArea[p,sc,n,ar] == sum(mTEPES.pLoadLevelDuration[p,sc,n]() * OptModel.vTotalOutput[p,sc,n,re] for re in mTEPES.re if (ar,re) in mTEPES.a2g and (p,re) in mTEPES.pre)
-        else:
+        # Skip if there are no RES energy requirements
+        if mTEPES.pRESEnergy[p,ar] == 0:
             return Constraint.Skip
+        # This constraint applies to all Stages in the Scenario, so it only needs to be formulated once per scenario.
+        # It is formulated on the last Stage so Skip if this is not the last stage
+        if st != mTEPES.Last_st:
+            return Constraint.Skip
+        # Formulate if this is the last Stage in the Scenario and there are RES requirements
+        return OptModel.vTotalRESEnergyArea[p,sc,n,ar] == sum(mTEPES.pLoadLevelDuration[p,sc,n]() * OptModel.vTotalOutput[p,sc,n,re] for re in mTEPES.re if (ar,re) in mTEPES.a2g and (p,re) in mTEPES.pre)
+
     setattr(OptModel, f'eTotalRESEnergyArea_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.ar, rule=eTotalRESEnergyArea, doc='area RES energy [GWh]'))
 
     def eTotalRCost(OptModel,n):
+        # Cost of all energies not supplied, only add up ENS variables which exist in the model
+        # If no H2 or Heat are being considered, their corresponding ENS variable is not added to the model so it cannot be accessed
+        # Therefore, the 4 combinations are needed to be formulated separately
         if   mTEPES.pIndHydrogen == 0 and mTEPES.pIndHeat == 0:
             return OptModel.vTotalRCost[p,sc,n] == sum(mTEPES.pLoadLevelDuration[p,sc,n]() * mTEPES.pENSCost * OptModel.vENS[p,sc,n,nd] for nd in mTEPES.nd)
         elif mTEPES.pIndHydrogen == 1 and mTEPES.pIndHeat == 0:
@@ -215,72 +228,96 @@ def GenerationOperationModelFormulationInvestment(OptModel, mTEPES, pIndLogConso
     StartTime = time.time()
 
     def eInstallGenComm(OptModel,n,gc):
-        if gc in mTEPES.nr and gc not in mTEPES.eh and gc not in mTEPES.bc and mTEPES.pMustRun[gc] == 0 and (mTEPES.pMinPowerElec[p,sc,n,gc] or mTEPES.pConstantVarCost[p,sc,n,gc]):
-            return OptModel.vCommitment[p,sc,n,gc]                                 <= OptModel.vGenerationInvest[p,gc]
-        else:
+        #This constraint is only needed by generators which actually have commitment variables, Skip for any generator which does not need them
+        # Skip if the candidate is RES
+        if gc not in mTEPES.nr:
             return Constraint.Skip
+        # Skip if generator is a non-hydro ESS
+        if gc in mTEPES.eh and gc not in mTEPES.h:
+            return Constraint.Skip
+        # Skip if it is a boiler
+        if gc in mTEPES.bc:
+            return Constraint.Skip
+        # Skip if it is a must-run generator
+        if mTEPES.pMustRun == 1:
+            return Constraint.Skip
+        # If generator has no minimum power and no cost for being committed, commitment variable is irrelevant.
+        if mTEPES.pMinPower[p,sc,n,gc] == 0 and  mTEPES.pConstantVarCost[p,sc,n,gc] == 0:
+            return Constraint.Skip
+        # If generator can be committed and it's commitment is relevant, formulate the constraint
+        return OptModel.vCommitment[p,sc,n,gc] <= OptModel.vGenerationInvest[p,gc]
+
     setattr(OptModel, f'eInstallGenComm_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.gc, rule=eInstallGenComm, doc='commitment if installed unit [p.u.]'))
 
     if pIndLogConsole == 1:
         print('eInstallGenComm       ... ', len(getattr(OptModel, f'eInstallGenComm_{p}_{sc}_{st}')), ' rows')
 
     def eInstallESSComm(OptModel,n,ec):
-        if mTEPES.pIndBinStorInvest[ec]:
-            return OptModel.vCommitment[p,sc,n,ec] <= OptModel.vGenerationInvest[p,ec]
-        else:
+        # pIndBinStorInvest is a parameter that indicates if inflows and storage capacity are linked to the investment decision
+        # Commitment of the candidate here is used to limit the amount of inflows and storage the ESS has
+        if mTEPES.pIndBinStorInvest[ec] == 0:
             return Constraint.Skip
+        return OptModel.vCommitment[p,sc,n,ec] <= OptModel.vGenerationInvest[p,ec]
+
     setattr(OptModel, f'eInstallESSComm_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.ec, rule=eInstallESSComm, doc='commitment if ESS unit [p.u.]'))
 
     if pIndLogConsole == 1:
         print('eInstallESSComm       ... ', len(getattr(OptModel, f'eInstallESSComm_{p}_{sc}_{st}')), ' rows')
 
     def eInstallGenCap(OptModel,n,gc):
-        if (p,gc) in mTEPES.pgc:
-            if mTEPES.pMaxPowerElec[p,sc,n,gc]:
-                return OptModel.vTotalOutput   [p,sc,n,gc] / mTEPES.pMaxPowerElec [p,sc,n,gc] <= OptModel.vGenerationInvest[p,gc]
-            else:
-                return Constraint.Skip
-        else:
+        # Skip if the generator is not available in the period
+        if (p,gc) not in mTEPES.pgc:
             return Constraint.Skip
+        # Skip if the generator cannot output power in the LoadLevel
+        if mTEPES.pMaxPowerElec[p,sc,n,gc] == 0:
+            return Constraint.Skip
+
+        return OptModel.vTotalOutput   [p,sc,n,gc] / mTEPES.pMaxPowerElec [p,sc,n,gc] <= OptModel.vGenerationInvest[p,gc]
+
     setattr(OptModel, f'eInstallGenCap_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.gc, rule=eInstallGenCap, doc='output if installed gen unit [p.u.]'))
 
     if pIndLogConsole == 1:
         print('eInstallGenCap        ... ', len(getattr(OptModel, f'eInstallGenCap_{p}_{sc}_{st}')), ' rows')
 
     def eInstallFHUCap(OptModel,n,bc):
-        if (p,bc) in mTEPES.pbc:
-            if mTEPES.pMaxPowerHeat[p,sc,n,bc]:
-                return OptModel.vTotalOutputHeat[p,sc,n,bc] / mTEPES.pMaxPowerHeat[p,sc,n,bc] <= OptModel.vGenerationInvest[p,bc]
-            else:
-                return Constraint.Skip
-        else:
+        # Skip if the boiler is not available in the period
+        if (p,bc) not in mTEPES.pbc:
             return Constraint.Skip
+        # Skip if the Boiler cannot output heat in the LoadLevel
+        if mTEPES.pMaxPowerHeat[p,sc,n,bc] == 0:
+            return Constraint.Skip
+
+        return OptModel.vTotalOutputHeat[p,sc,n,bc] / mTEPES.pMaxPowerHeat[p,sc,n,bc] <= OptModel.vGenerationInvest[p,bc]
+
     setattr(OptModel, f'eInstallFHUCap_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.bc, rule=eInstallFHUCap, doc='heat production if installed fuel heating unit [p.u.]'))
 
     if pIndLogConsole == 1:
         print('eInstallFHUCap        ... ', len(getattr(OptModel, f'eInstallFHUCap_{p}_{sc}_{st}')), ' rows')
 
     def eInstallConESS(OptModel,n,ec):
-        if (p,ec) in mTEPES.pec:
-            if mTEPES.pMaxCharge[p,sc,n,ec]:
-                return OptModel.vESSTotalCharge[p,sc,n,ec] / mTEPES.pMaxCharge[p,sc,n,ec] <= OptModel.vGenerationInvest[p,ec]
-            else:
-                return Constraint.Skip
-        else:
+        # Skip if the ESS is not available in the period
+        if (p,ec) not in mTEPES.pec:
             return Constraint.Skip
+        # Skip if the ESS cannot charge in the LoadLevel
+        if mTEPES.pMaxCharge[p, sc, n, ec]:
+            return Constraint.Skip
+
+        return OptModel.vESSTotalCharge[p,sc,n,ec] / mTEPES.pMaxCharge[p,sc,n,ec] <= OptModel.vGenerationInvest[p,ec]
+
     setattr(OptModel, f'eInstallConESS_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.ec, rule=eInstallConESS, doc='consumption if installed ESS unit [p.u.]'))
 
     if pIndLogConsole == 1:
         print('eInstallConESS        ... ', len(getattr(OptModel, f'eInstallConESS_{p}_{sc}_{st}')), ' rows')
 
     def eUninstallGenComm(OptModel,n,gd):
-        if (p,gd) in mTEPES.pgd:
+        # Skip if the generator is not available in the period
+        if (p,gd) not in mTEPES.pgd:
+            return Constraint.Skip
+
             if gd in mTEPES.nr and gd not in mTEPES.eh and mTEPES.pMustRun[gd] == 0 and (mTEPES.pMinPowerElec[p,sc,n,gd] or mTEPES.pConstantVarCost[p,sc,n,gd]):
                 return OptModel.vCommitment[p,sc,n,gd]                                <= 1 - OptModel.vGenerationRetire[p,gd]
             else:
                 return Constraint.Skip
-        else:
-            return Constraint.Skip
     setattr(OptModel, f'eUninstallGenComm_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.gd, rule=eUninstallGenComm, doc='commitment if uninstalled unit [p.u.]'))
 
     if pIndLogConsole == 1:
@@ -588,6 +625,37 @@ def GenerationOperationModelFormulationStorage(OptModel, mTEPES, pIndLogConsole,
         print('eInflows2Comm         ... ', len(getattr(OptModel, f'eInflows2Comm_{p}_{sc}_{st}')), ' rows')
 
     def eESSInventory(OptModel,n,es):
+        # Skip if generator is not available in the period
+        if (p,es) not in mTEPES.pes:
+            return Constraint.Skip
+        # Skip if generator has no inflows and can't charge. If both are true, no inventory management is needed
+        if mTEPES.pTotalMaxCharge[es] == 0 and mTEPES.pTotalEnergyInflows[es] == 0:
+            return Constraint.Skip
+        # Skip if this is not a valid Period, Stage, Scenario, LoadLevel combination where an inventory constraint should be formulated
+        if (p,sc,st,n) not in mTEPES.s2n:
+            return Constraint.Skip
+        # Check if this is the first valid LoadLevel where an inventory constraint should be formulated
+        if mTEPES.n.ord(n) == mTEPES.pStorageTimeStep[es]:
+            # Check if the generator is a candidate for installation or not
+            if es not in mTEPES.ec:
+                # Constraint for first valid LoadLevel and already installed generators
+                return mTEPES.pIniInventory[p,sc,n,es]()                                            + sum(mTEPES.pDuration[p,sc,n2]()*(mTEPES.pEnergyInflows[p,sc,n2,es]() - OptModel.vEnergyOutflows[p,sc,n2,es] - OptModel.vTotalOutput[p,sc,n2,es] + mTEPES.pEfficiency[es]*OptModel.vESSTotalCharge[p,sc,n2,es]) for n2 in list(mTEPES.n2)[mTEPES.n.ord(n)-mTEPES.pStorageTimeStep[es]:mTEPES.n.ord(n)]) == OptModel.vESSInventory[p,sc,n,es] + OptModel.vESSSpillage[p,sc,n,es]
+            else:
+                # Constraint for first valid LoadLevel and candidate generators
+                return OptModel.vIniInventory[p,sc,n,es]                                            + sum(mTEPES.pDuration[p,sc,n2]()*(OptModel.vEnergyInflows[p,sc,n2,es] - OptModel.vEnergyOutflows[p,sc,n2,es] - OptModel.vTotalOutput[p,sc,n2,es] + mTEPES.pEfficiency[es]*OptModel.vESSTotalCharge[p,sc,n2,es]) for n2 in list(mTEPES.n2)[mTEPES.n.ord(n)-mTEPES.pStorageTimeStep[es]:mTEPES.n.ord(n)]) == OptModel.vESSInventory[p,sc,n,es] + OptModel.vESSSpillage[p,sc,n,es]
+        # This is a valid LoadLevel but not the first valid one
+        else:
+            # Check if the generator is a candidate for installation or not
+            if es not in mTEPES.ec:
+                # Constraint for any other valid LoadLevel and already installed generators
+                return OptModel.vESSInventory[p,sc,mTEPES.n.prev(n,mTEPES.pStorageTimeStep[es]),es] + sum(mTEPES.pDuration[p,sc,n2]()*(mTEPES.pEnergyInflows[p,sc,n2,es]() - OptModel.vEnergyOutflows[p,sc,n2,es] - OptModel.vTotalOutput[p,sc,n2,es] + mTEPES.pEfficiency[es]*OptModel.vESSTotalCharge[p,sc,n2,es]) for n2 in list(mTEPES.n2)[mTEPES.n.ord(n)-mTEPES.pStorageTimeStep[es]:mTEPES.n.ord(n)]) == OptModel.vESSInventory[p,sc,n,es] + OptModel.vESSSpillage[p,sc,n,es]
+            else:
+                # Constraint for any other valid LoadLevel and already installed generators
+                return OptModel.vESSInventory[p,sc,mTEPES.n.prev(n,mTEPES.pStorageTimeStep[es]),es] + sum(mTEPES.pDuration[p,sc,n2]()*(OptModel.vEnergyInflows[p,sc,n2,es] - OptModel.vEnergyOutflows[p,sc,n2,es] - OptModel.vTotalOutput[p,sc,n2,es] + mTEPES.pEfficiency[es]*OptModel.vESSTotalCharge[p,sc,n2,es]) for n2 in list(mTEPES.n2)[mTEPES.n.ord(n)-mTEPES.pStorageTimeStep[es]:mTEPES.n.ord(n)]) == OptModel.vESSInventory[p,sc,n,es] + OptModel.vESSSpillage[p,sc,n,es]
+
+    setattr(OptModel, f'eESSInventory_{p}_{sc}_{st}', Constraint(mTEPES.nesc, rule=eESSInventory, doc='ESS inventory balance [GWh]'))
+
+    def eESSInventory(OptModel,n,es):
         if (p,es) in mTEPES.pes and (mTEPES.pTotalMaxCharge[es] or mTEPES.pTotalEnergyInflows[es]):
             if   (p,sc,st,n) in mTEPES.s2n and mTEPES.n.ord(n) == mTEPES.pStorageTimeStep[es]:
                 if es not in mTEPES.ec:
@@ -603,7 +671,8 @@ def GenerationOperationModelFormulationStorage(OptModel, mTEPES, pIndLogConsole,
                 return Constraint.Skip
         else:
             return Constraint.Skip
-    setattr(OptModel, f'eESSInventory_{p}_{sc}_{st}', Constraint(mTEPES.nesc, rule=eESSInventory, doc='ESS inventory balance [GWh]'))
+
+
 
     if pIndLogConsole == 1:
         print('eESSInventory         ... ', len(getattr(OptModel, f'eESSInventory_{p}_{sc}_{st}')), ' rows')
@@ -639,7 +708,7 @@ def GenerationOperationModelFormulationStorage(OptModel, mTEPES, pIndLogConsole,
         print('eMaxShiftTime         ... ', len(getattr(OptModel, f'eMaxShiftTime_{p}_{sc}_{st}')), ' rows')
 
     def eMaxCharge(OptModel,n,eh):
-        # Check if generator is available in the period and has variable charging capacity
+        # Skip if generator is not available in the period or has no variable charging capacity
         if (p,eh) not in mTEPES.peh or mTEPES.pMaxCharge2ndBlock[p,sc,n,eh] == 0:
             return Constraint.Skip
 
@@ -660,13 +729,17 @@ def GenerationOperationModelFormulationStorage(OptModel, mTEPES, pIndLogConsole,
         print('eMaxCharge            ... ', len(getattr(OptModel, f'eMaxCharge_{p}_{sc}_{st}')), ' rows')
 
     def eMinCharge(OptModel, n, eh):
-        if mTEPES.pIndOperReserve[eh] == 0 and (p, eh) in mTEPES.peh:
-            if sum(mTEPES.pOperReserveUp[p, sc, n, ar] for ar in a2e[eh]) and mTEPES.pMaxCharge[p, sc, n, eh]:
-                return OptModel.vCharge2ndBlock[p, sc, n, eh] - OptModel.vESSReserveUp[p, sc, n, eh] >= 0.0
-            else:
-                return Constraint.Skip
-        else:
+        # Skip if generator is not available in the period
+        if (p,eh) not in mTEPES.peh:
             return Constraint.Skip
+        # Skip if generator cannot supply operating reserves or if reserves are not needed in the generator's Area
+        if mTEPES.pIndOperReserve[eh] != 0 or sum(mTEPES.pOperReserveUp[p, sc, n, ar] for ar in a2e[eh]) == 0:
+            return Constraint.Skip
+        # Skip if generator cannot consume power in the corresponding LoadLevel
+        if mTEPES.pMaxCharge[p,sc,n,eh] == 0:
+            return Constraint.Skip
+        # Formulate constraint if generator is available, can supply reserves, reserves are needed and has charging capacity
+        return OptModel.vCharge2ndBlock[p, sc, n, eh] - OptModel.vESSReserveUp[p, sc, n, eh] >= 0.0
     setattr(OptModel, f'eMinCharge_{p}_{sc}_{st}', Constraint(mTEPES.n, mTEPES.eh, rule=eMinCharge, doc='min charge of an ESS [p.u.]'))
 
     if pIndLogConsole == 1:
@@ -681,7 +754,7 @@ def GenerationOperationModelFormulationStorage(OptModel, mTEPES, pIndLogConsole,
 
     # Generators with consumption capability cannot be consuming and generating simultaneously
     def eChargeDischarge(OptModel,n,eh):
-        # Check if generator is avaiable in the period
+        # Skip if generator is not available in the period
         if (p,eh) not in mTEPES.peh:
             return Constraint.Skip
         # Constraint only relevant to generators which can consume and generate power
@@ -704,10 +777,10 @@ def GenerationOperationModelFormulationStorage(OptModel, mTEPES, pIndLogConsole,
         print('eChargeDischarge      ... ', len(getattr(OptModel, f'eChargeDischarge_{p}_{sc}_{st}')), ' rows')
 
     def eESSTotalCharge(OptModel,n,eh):
-        # Check if generator is avaiable in the period
+        # Skip if generator is not available in the period
         if (p,eh) not in mTEPES.peh:
             return Constraint.Skip
-        # Constraint only applies to generators with charging capabilities
+        # Skip if generator has no charging capabilities
         if mTEPES.pMaxCharge2ndBlock[p,sc,n,eh] == 0:
             return Constraint.Skip
 
