@@ -509,17 +509,29 @@ Logical relation between stable, ramp up, and ramp down states (generating units
 
 :math:`rss^p_{\omega nt} + rsu^p_{\omega nt} + rsd^p_{\omega nt} = uc^p_{\omega nt} \quad \forall p \omega nt`
 
-Maximum commitment of a committable unit (all except the VRES units) for all the load levels [p.u.] «``eMaxCommitment``»
+Maximum commitment of a committable unit (all except the VRES units) for all the load levels [p.u.] «``eMaxCommitmentYearly``»
 
 :math:`uc^p_{\omega ng} \leq uc'^p_{\omega g} \quad \forall p \omega ng`
 
-Maximum of all the capacity factors [p.u.] «``eMaxCommitGen``»
+Maximum commitment of a committable unit (all except the VRES units) for all the load levels [p.u.] «``eMaxCommitmentHourly``»
+
+:math:`uc^p_{\omega ng} \leq uc'^p_{\omega g} \quad \forall  \omega ng`
+
+Maximum of all the capacity factors [p.u.] «``eMaxCommitGenYearly``»
 
 :math:`\frac{gp^p_{\omega ng}}{\overline{GP}_g} \leq uc'^p_{\omega g} \quad \forall p \omega ng`
 
-Mutually exclusive :math:`g` and :math:`g'` units (e.g., thermal, ESS, VRES units) [p.u.] «``eExclusiveGens``»
+Maximum of all the capacity factors [p.u.] «``eMaxCommitGenHourly``»
+
+:math:`\frac{gp^p_{\omega ng}}{\overline{GP}_g} \leq uc'^p_{\omega g} \quad \forall \omega ng`
+
+Yearly mutually exclusive :math:`g` and :math:`g'` units (e.g., thermal, ESS, VRES units) [p.u.] «``eExclusiveGensYearly``»
 
 :math:`uc'^p_{\omega g} + uc'^p_{\omega g'} \leq 1 \quad \forall p \omega gg'`
+
+Hourly mutually exclusive :math:`g` and :math:`g'` units (e.g., thermal, ESS, VRES units) [p.u.] «``eExclusiveGensHourly``»
+
+:math:`uc'^p_{\omega g} + uc'^p_{\omega g'} \leq 1 \quad \forall n \omega gg'`
 
 Initial commitment of the units for every period, scenario, and stage is determined by the model based on the merit order loading, including the VRES and ESS units.
 
